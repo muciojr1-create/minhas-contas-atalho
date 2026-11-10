@@ -13,6 +13,7 @@
   // Quando aberto pelo ícone da tela inicial (?abrir=1), vai direto para o app.
   var APP = 'https://claude.ai/artifact/NmEerU56w3FJGN9R3ixNaA';
   if (/[?&]abrir=1/.test(location.search)) location.replace(APP);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 </script>
 <style>
   :root{--bg:#f4f6f8;--card:#fff;--text:#14202b;--muted:#64748b;--primary:#0f766e;--line:#e2e8f0}
@@ -41,9 +42,11 @@
   <div class="card">
     <b>📱 Para fixar na tela do celular com este ícone</b>
     <b style="margin-top:10px">Android (Chrome)</b>
+    <button id="btnInstalar" hidden style="width:100%;margin:6px 0 8px;padding:14px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;font-size:16px">⬇ Instalar o app</button>
     <ol>
+      <li>Abra esta página no <b style="display:inline">Chrome</b> (não dentro do WhatsApp).</li>
       <li>Toque nos <b style="display:inline">3 pontinhos ⋮</b> no canto de cima.</li>
-      <li>Toque em <b style="display:inline">Adicionar à tela inicial</b> e depois em <b style="display:inline">Adicionar</b>.</li>
+      <li>Toque em <b style="display:inline">Instalar app</b> (ou <b style="display:inline">Adicionar à tela inicial</b>) e confirme.</li>
     </ol>
     <b style="margin-top:10px">iPhone (Safari)</b>
     <ol>
@@ -53,5 +56,12 @@
   </div>
   <p style="margin-top:16px;font-size:13px">Esta página é só um atalho. Seus dados ficam na sua conta Claude.</p>
 </main>
+<script>
+  // Botão "Instalar o app" aparece quando o Chrome permite instalar
+  var pedido = null, btn = document.getElementById('btnInstalar');
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); pedido = e; btn.hidden = false; });
+  btn.addEventListener('click', function(){ if (!pedido) return; pedido.prompt(); pedido = null; btn.hidden = true; });
+  window.addEventListener('appinstalled', function(){ btn.hidden = true; });
+</script>
 </body>
 </html>
