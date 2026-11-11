@@ -505,7 +505,11 @@ function relatorio(t, c, pct, n){
     (t.lanche ? linha('🍔 Lanche e outros gastos', '<span class="neg">' + R$(-t.lanche) + '</span>') : '') +
     linha('Lucro do tanque', '<span class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</span>', 'total') +
     (t.fechado && t.kmFora > 0 && t.custoKm != null ? linha('Lucro só do trabalho', '<span class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', '', 'sem os ' + n0(t.kmFora) + ' km particulares (' + R$(t.gasolinaFora) + ' de gasolina)') : '') +
-    (pct > 0 && t.lucro > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '');
+    (pct > 0 && t.lucro > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '') +
+    (t.ganho > 0 ? '<h4>📱 Lucro por aplicativo</h4>' + [[U, t.uber], [N, t.n99]].filter(x => x[1] > 0).map(([m, g]) => {
+      const f = g / t.ganho, gas = a.valor * f, lan = t.lanche * f, lu = g - gas - lan;
+      return linha(m + ' Lucro', '<span class="' + cor(lu) + '">' + R$(lu) + '</span>', '', 'ganho ' + R$(g) + ' − gasolina ' + R$(gas) + (lan ? ' − lanche ' + R$(lan) : '') + ' · ' + n0(f * 100) + '% do ganho');
+    }).join('') + '<p class="s" style="margin:6px 0 0">A gasolina e o lanche são divididos na proporção do que cada aplicativo rendeu.</p>' : '');
   h += '<h4>📏 Rodagem</h4>' +
     linha('Km rodados', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar' : 'pela última parcial') : 'hodômetro agora') + '') +
     linha('🚗 Em parciais (trabalho)', n0(t.kmParc) + ' km') +
