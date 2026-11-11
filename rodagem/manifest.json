@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Rodagem Uber e 99",
+  "short_name": "Rodagem",
+  "description": "Parciais na Uber e na 99, km, horas, abastecimento, média km/l e lucro.",
+  "lang": "pt-BR",
+  "start_url": "./?abrir=1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b2430",
+  "theme_color": "#1b2430",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

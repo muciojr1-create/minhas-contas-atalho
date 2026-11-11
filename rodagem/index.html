@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1b2430">
+<title>Rodagem Uber e 99</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="apple-mobile-web-app-title" content="Rodagem Uber e 99">
+<script>
+  // Quando aberto pelo ícone da tela inicial (?abrir=1), vai direto para o app.
+  var APP = 'https://claude.ai/artifact/Pkxhv1uoqCqcJRHDwRVWZH';
+  if (/[?&]abrir=1/.test(location.search)) location.replace(APP);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--text:#14202b;--muted:#64748b;--primary:#b97f00;--line:#e2e8f0}
+  @media (prefers-color-scheme: dark){:root{--bg:#0b1117;--card:#151e27;--text:#e6edf3;--muted:#8b9bb0;--primary:#f2b01e;--line:#243241}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px 16px}
+  main{max-width:460px;margin:0 auto;text-align:center}
+  img{width:140px;height:140px;border-radius:32px;border:1px solid var(--line);background:#fff;object-fit:cover}
+  h1{margin:14px 0 6px;font-size:26px}
+  p{color:var(--muted);margin:0 0 18px}
+  a.btn{display:block;background:var(--primary);color:#fff;text-decoration:none;font-weight:700;padding:16px;border-radius:14px;font-size:18px}
+  @media (prefers-color-scheme: dark){a.btn{color:#231a00}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:20px;text-align:left}
+  .card b{display:block;margin-bottom:6px}
+  ol{margin:0;padding-left:20px}
+  li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <img src="icone-192.png" alt="Ícone do Rodagem: motorista sorrindo ao volante">
+  <h1>Rodagem Uber e 99</h1>
+  <p>Parciais na Uber e na 99, km, horas, abastecimento, média km/l e lucro.</p>
+  <a class="btn" id="abrir" href="https://claude.ai/artifact/Pkxhv1uoqCqcJRHDwRVWZH">Abrir o app</a>
+
+  <div class="card">
+    <b>📱 Para fixar na tela do celular com este ícone</b>
+    <b style="margin-top:10px">Android (Chrome)</b>
+    <button id="btnInstalar" hidden style="width:100%;margin:6px 0 8px;padding:14px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;font-size:16px">⬇ Instalar o app</button>
+    <ol>
+      <li>Abra esta página no <b style="display:inline">Chrome</b> (não dentro do WhatsApp).</li>
+      <li>Toque nos <b style="display:inline">3 pontinhos ⋮</b> no canto de cima.</li>
+      <li>Toque em <b style="display:inline">Instalar app</b> (ou <b style="display:inline">Adicionar à tela inicial</b>) e confirme.</li>
+    </ol>
+    <b style="margin-top:10px">iPhone (Safari)</b>
+    <ol>
+      <li>Toque no botão <b style="display:inline">Compartilhar</b> (o quadrado com a setinha para cima).</li>
+      <li>Toque em <b style="display:inline">Adicionar à Tela de Início</b> e depois em <b style="display:inline">Adicionar</b>.</li>
+    </ol>
+  </div>
+  <p style="margin-top:16px;font-size:13px">Esta página é só um atalho. Seus dados ficam na sua conta Claude.</p>
+</main>
+<script>
+  // Botão "Instalar o app" aparece quando o Chrome permite instalar
+  var pedido = null, btn = document.getElementById('btnInstalar');
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); pedido = e; btn.hidden = false; });
+  btn.addEventListener('click', function(){ if (!pedido) return; pedido.prompt(); pedido = null; btn.hidden = true; });
+  window.addEventListener('appinstalled', function(){ btn.hidden = true; });
+</script>
+</body>
+</html>
