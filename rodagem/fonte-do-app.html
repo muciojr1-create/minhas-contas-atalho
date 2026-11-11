@@ -366,8 +366,12 @@ try { aba = localStorage.getItem('rodagem-aba') || 'resumo'; } catch (e) {}
 function salvarLocal(){ try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {} }
 function novoId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 async function gravar(id, dados){
-  if (col){ await col.doc(id).set(dados); }
-  else { if (id === 'config') config = dados; else regs.set(id, dados); salvarLocal(); render(); }
+  if (col){
+    try { await col.doc(id).set(dados); return; }
+    catch (e) { if (!e || e.code !== 'invalid_argument') throw e; modoLocal('Sua conta não tem permissão para salvar neste app. Os lançamentos ficam guardados neste aparelho.'); }
+  }
+  if (id === 'config') config = dados; else regs.set(id, dados);
+  salvarLocal(); render();
 }
 async function apagar(id){
   if (col){ await col.doc(id).delete(); }
@@ -403,6 +407,9 @@ async function iniciar(){
   try {
     db.doc('eventos/agenda').onSnapshot(sn => { agenda = sn.exists ? sn.data() : {itens: []}; if (aba === 'eventos') render(); }, () => {});
   } catch (e) {}
+  // Quem só pode ver o app (ex.: amigo com acesso de leitura) guarda os lançamentos no próprio aparelho.
+  let pode = null; try { pode = await user.can('data.write'); } catch (e) {}
+  if (pode === false){ modoLocal('Seus lançamentos ficam guardados neste aparelho. Para salvar na conta, peça ao dono do app acesso de Colaborador.'); return; }
   col = db.collection('data/users/' + uid);
   const demora = setTimeout(() => {
     $('status').textContent = 'Sem conexão';
