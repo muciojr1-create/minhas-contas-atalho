@@ -299,7 +299,6 @@ function calcular(regs, mediaPadrao, reservaPct){
     for (const d of t.dias) base(d);
     t.uber = soma(t.dias, d => d.uber); t.n99 = soma(t.dias, d => d.n99); t.ganho = t.uber + t.n99;
     t.lanche = soma(t.dias, d => d.lanche); t.horas = soma(t.dias, d => d.horas); t.kmParc = soma(t.dias, d => d.rodou);
-    t.kmFora = Math.max(0, t.km - t.kmParc);            // uso particular (entre parciais e depois da última)
     if (t.fechado){
       t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
       t.gasto = t.abast.valor;
@@ -310,6 +309,7 @@ function calcular(regs, mediaPadrao, reservaPct){
       t.restoL = Math.max(0, t.abast.litros - t.km / mediaRef);
       t.restoKm = t.restoL * mediaRef;
     }
+    t.kmFora = Math.max(0, (t.km || 0) - t.kmParc);     // uso particular (entre parciais e depois da última)
     t.lucro = t.ganho - t.abast.valor - t.lanche;          // o tanque inteiro que você pagou entra na conta
     t.lucroUsado = t.ganho - t.gasto - t.lanche;           // só a gasolina já gasta (para o tanque em uso)
     t.gasolinaFora = t.custoKm != null ? t.kmFora * t.custoKm : 0;
