@@ -106,7 +106,8 @@ td .marca{height:18px;font-size:11px;padding:0 5px}
 .ev:first-child{border-top:0;padding-top:0} .ev:last-child{padding-bottom:0}
 .ev .hora{width:52px;flex:none;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px}
 .ev .mid{flex:1;min-width:0}
-.ev a{color:var(--primary-text);font-size:12.5px;font-weight:600}
+.ev .fonte{display:block;margin-top:5px;font-size:12.5px;color:var(--muted)}
+.ev a{color:var(--primary-text);font-weight:600}
 .tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--bg);color:var(--muted);font-weight:600;margin:4px 4px 0 0;border:1px solid var(--line)}
 .tag.grande{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
 .tag.conf{background:var(--danger-soft);color:var(--danger);border-color:transparent}
@@ -579,6 +580,14 @@ function telaHistorico(c, lista, pct){
   return h;
 }
 
+const FONTES = {'instagram.com': 'Instagram', 'facebook.com': 'Facebook', 'x.com': 'X (Twitter)', 'twitter.com': 'X (Twitter)', 'tiktok.com': 'TikTok', 'youtube.com': 'YouTube',
+  'google.com': 'Google', 'sympla.com.br': 'Sympla', 'eventim.com.br': 'Eventim', 'ticketmaster.com.br': 'Ticketmaster', 'bilheteriadigital.com': 'Bilheteria Digital',
+  'songkick.com': 'Songkick', 'bandsintown.com': 'Bandsintown', 'metropoles.com': 'Metrópoles', 'correiobraziliense.com.br': 'Correio Braziliense', 'agenciabrasilia.df.gov.br': 'Agência Brasília'};
+function nomeFonte(url){
+  let h = ''; try { h = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return 'site'; }
+  for (const k in FONTES) if (h === k || h.endsWith('.' + k)) return FONTES[k];
+  return h;
+}
 function telaEventos(){
   if (!agenda) return '<div class="card"><p class="empty">' + (col ? 'Carregando a agenda…' : 'A agenda de eventos aparece quando o app está ligado à sua conta Claude.') + '</p></div>';
   const hj = hoje(), am = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })();
@@ -591,7 +600,8 @@ function telaEventos(){
     if (e.tipo) tags.push('<span class="tag">' + esc(e.tipo) + '</span>');
     if (e.regiao) tags.push('<span class="tag">📍 ' + esc(e.regiao) + '</span>');
     if (e.confirmar) tags.push('<span class="tag conf">confirmar data</span>');
-    const link = /^https:\/\//.test(e.fonte || '') ? '<a href="' + esc(e.fonte) + '" target="_blank" rel="noopener">Ver fonte</a>' : '';
+    const url = /^https:\/\//.test(e.fonte || '') ? e.fonte : '';
+    const link = '<span class="fonte">Fonte: ' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(e.fonteNome || nomeFonte(url)) + '</a>' : esc(e.fonteNome || 'não informada')) + '</span>';
     return '<div class="ev"><span class="hora">' + (e.hora ? esc(e.hora) : '–') + '</span><span class="mid"><span class="t">' + esc(e.nome || '') + '</span>' +
       '<span class="s" style="display:block">' + esc(e.local || 'Local a confirmar') + (e.ate ? ' · até ' + dataBR(e.ate) : '') + '</span>' +
       (e.obs ? '<span class="s" style="display:block">' + esc(e.obs) + '</span>' : '') +
