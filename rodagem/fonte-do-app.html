@@ -102,10 +102,19 @@ tr.parc{cursor:pointer}
 tr.total td{font-weight:800;font-size:14px;background:var(--bg)}
 tr.total td:first-child{background:var(--bg)}
 td .marca{height:18px;font-size:11px;padding:0 5px}
+.ev{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.ev:first-child{border-top:0;padding-top:0} .ev:last-child{padding-bottom:0}
+.ev .hora{width:52px;flex:none;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px}
+.ev .mid{flex:1;min-width:0}
+.ev a{color:var(--primary-text);font-size:12.5px;font-weight:600}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--bg);color:var(--muted);font-weight:600;margin:4px 4px 0 0;border:1px solid var(--line)}
+.tag.grande{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.tag.conf{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.diaev{display:flex;align-items:baseline;gap:8px}
 
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;z-index:10;
   padding:6px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px))}
-nav.tabs button{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--muted);padding:6px 4px;border-radius:10px;flex:1;max-width:130px}
+nav.tabs button{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;min-width:0;color:var(--muted);padding:6px 4px;border-radius:10px;flex:1;max-width:130px}
 nav.tabs button b{font-size:21px;font-weight:400;line-height:1}
 nav.tabs button.on{color:var(--primary-text);background:var(--primary-soft);font-weight:600}
 .fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:18px;border:none;background:var(--primary);color:var(--on-primary);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:11}
@@ -144,6 +153,7 @@ label.f .marca{margin-right:4px}
   <button data-tab="tanques"><b>⛽</b>Tanques</button>
   <button data-tab="historico"><b>📋</b>Histórico</button>
   <button data-tab="mes"><b>📊</b>Mês</button>
+  <button data-tab="eventos"><b>🎉</b>Eventos</button>
 </nav>
 
 <div class="fundo" id="folhaMenu" hidden><div class="folha menu">
@@ -336,6 +346,7 @@ let pronto = false;
 let mesVisto = hoje().slice(0, 7);
 let aba = 'resumo';
 let editando = null, modoParcial = 'completa';
+let agenda = null;               // eventos de Brasília (documento eventos/agenda)
 try { aba = localStorage.getItem('rodagem-aba') || 'resumo'; } catch (e) {}
 
 function salvarLocal(){ try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {} }
@@ -375,6 +386,9 @@ async function iniciar(){
     modoLocal('Não foi possível ligar à sua conta Claude agora. O que você lançar fica guardado só neste aparelho.');
     return;
   }
+  try {
+    db.doc('eventos/agenda').onSnapshot(sn => { agenda = sn.exists ? sn.data() : {itens: []}; if (aba === 'eventos') render(); }, () => {});
+  } catch (e) {}
   col = db.collection('data/users/' + uid);
   const demora = setTimeout(() => {
     $('status').textContent = 'Sem conexão';
@@ -554,12 +568,42 @@ function telaHistorico(c, lista, pct){
   return h;
 }
 
+function telaEventos(){
+  if (!agenda) return '<div class="card"><p class="empty">' + (col ? 'Carregando a agenda…' : 'A agenda de eventos aparece quando o app está ligado à sua conta Claude.') + '</p></div>';
+  const hj = hoje(), am = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })();
+  const itens = (Array.isArray(agenda.itens) ? agenda.itens : []).filter(e => e && e.data && (e.ate || e.data) >= hj);
+  let h = '<p class="s" style="margin:4px 0 12px">Agenda de Brasília e região' + (agenda.atualizado ? ', atualizada em ' + dataBR(String(agenda.atualizado)) : '') + '. Datas e horários vêm de sites de agenda e ingressos: confirme antes de contar com o movimento.</p>';
+  if (!itens.length) return h + '<div class="card"><p class="empty">Nenhum evento da agenda daqui para a frente.<br>Peça ao Claude para atualizar a lista.</p></div>';
+  const cartao = e => {
+    const tags = [];
+    if (e.publico === 'grande') tags.push('<span class="tag grande">Grande público</span>');
+    if (e.tipo) tags.push('<span class="tag">' + esc(e.tipo) + '</span>');
+    if (e.regiao) tags.push('<span class="tag">📍 ' + esc(e.regiao) + '</span>');
+    if (e.confirmar) tags.push('<span class="tag conf">confirmar data</span>');
+    const link = /^https:\/\//.test(e.fonte || '') ? '<a href="' + esc(e.fonte) + '" target="_blank" rel="noopener">Ver fonte</a>' : '';
+    return '<div class="ev"><span class="hora">' + (e.hora ? esc(e.hora) : '–') + '</span><span class="mid"><span class="t">' + esc(e.nome || '') + '</span>' +
+      '<span class="s" style="display:block">' + esc(e.local || 'Local a confirmar') + (e.ate ? ' · até ' + dataBR(e.ate) : '') + '</span>' +
+      (e.obs ? '<span class="s" style="display:block">' + esc(e.obs) + '</span>' : '') +
+      '<span style="display:block">' + tags.join('') + '</span>' + link + '</span></div>';
+  };
+  const emCartaz = itens.filter(e => e.ate && e.data < hj);
+  const porDia = {};
+  for (const e of itens.filter(e => !(e.ate && e.data < hj))) (porDia[e.data] = porDia[e.data] || []).push(e);
+  for (const d of Object.keys(porDia).sort()){
+    const nome = d === hj ? 'Hoje' : d === am ? 'Amanhã' : '';
+    h += '<h2><span class="diaev">' + (nome ? nome + ' · ' : '') + dataBR(d, true) + '</span><span>' + porDia[d].length + (porDia[d].length > 1 ? ' eventos' : ' evento') + '</span></h2>' +
+      '<div class="card">' + porDia[d].sort((a, b) => (a.hora || '99') < (b.hora || '99') ? -1 : 1).map(cartao).join('') + '</div>';
+  }
+  if (emCartaz.length) h += '<h2>Em cartaz o mês todo</h2><div class="card">' + emCartaz.map(cartao).join('') + '</div>';
+  return h;
+}
+
 function render(){
   if (!pronto) return;
   const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
   const pct = Number(config.reservaPct) || 0;
   const c = calcular(lista, config.mediaPadrao, pct);
-  $('view').innerHTML = aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
+  $('view').innerHTML = aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'eventos' ? telaEventos() : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
   for (const b of document.querySelectorAll('nav.tabs button')) b.classList.toggle('on', b.dataset.tab === aba);
 }
 setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.textContent = haQuanto(p); }, 30000);
