@@ -1,5 +1,5 @@
 // Necessário para o Chrome do Android oferecer "Instalar app".
-const CACHE = 'rodagem-v1';
+const CACHE = 'rodagem-v2';
 const FILES = ['./', './index.html', './manifest.json', './icone-192.png', './icone-512.png', './icone-180.png'];
 
 self.addEventListener('install', e => {

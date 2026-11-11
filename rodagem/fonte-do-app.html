@@ -1,173 +1,219 @@
 <title>Rodagem Uber e 99</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: coluna única de celular. O tanque atual é o painel escuro do topo (como o painel do carro);
-   abaixo vêm os dias, o resumo do mês e os tanques fechados, em listas claras e planas. */
+/* Layout: mesmo desenho do Minhas Contas (cabeçalho fixo, cartão de destaque, listas em cartões, abas embaixo e botão +).
+   O destaque é o painel do tanque atual, em cor de asfalto com faixa amarela. */
 :root{
-  --bg:#edeff2; --surface:#ffffff; --ink:#161b22; --muted:#5b6573; --line:#d6dbe2;
-  --amber:#f2b01e; --amber-ink:#231a00;
-  --good:#0f7a57; --bad:#bf352d;
-  --tank-bg:#1b2430; --tank-fg:#f3f5f8; --tank-muted:#a4b0c0; --tank-line:#324052; --tank-good:#4ad6a0; --tank-bad:#ff8a80;
-  --shade:rgba(10,14,20,.5);
-  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
-  --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --bg:#f4f6f8; --card:#ffffff; --text:#14202b; --muted:#64748b; --line:#e2e8f0;
+  --primary:#f2b01e; --on-primary:#231a00; --primary-soft:#fdf0cf; --primary-text:#8a5a00;
+  --danger:#dc2626; --danger-soft:#fee2e2; --ok:#16a34a; --ok-soft:#dcfce7;
+  --hero:#1b2430; --hero-fg:#f3f5f8; --hero-ok:#4ade80; --hero-bad:#fca5a5;
+  --uber:#000000; --uber-fg:#ffffff; --n99:#ffd500; --n99-fg:#1a1a1a;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.04); --shade:rgba(0,0,0,.45); --radius:16px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0e1217; --surface:#171d25; --ink:#e8ecf1; --muted:#93a0b1; --line:#2a333f;
-  --good:#3ecf98; --bad:#ff7a70; --tank-bg:#1d2632; --shade:rgba(0,0,0,.65); color-scheme:dark } }
+  --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
+  --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
+  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65); color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#0e1217; --surface:#171d25; --ink:#e8ecf1; --muted:#93a0b1; --line:#2a333f;
-  --good:#3ecf98; --bad:#ff7a70; --tank-bg:#1d2632; --shade:rgba(0,0,0,.65); color-scheme:dark }
+  --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
+  --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
+  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65); color-scheme:dark }
 
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);
-  padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-h1,h2,.num{font-family:var(--display);font-variant-numeric:tabular-nums}
-h1{font-size:26px;font-weight:700;margin:0;line-height:1.1}
-h2{font-size:19px;font-weight:600;margin:0}
-button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.status{font-size:12px;color:var(--muted);text-align:right}
-.aviso{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:8px;padding:10px 12px;font-size:13px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px 8px}
+header.top .wrap{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:12px;flex:none;background:var(--hero);object-fit:cover}
+h1{font-size:20px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:12px;color:var(--muted);line-height:1.2}
+h2{font-size:13px;margin:22px 0 8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center;gap:8px}
+h2 span{text-transform:none;letter-spacing:0;font-weight:600}
+.iconbtn{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:20px;flex:none}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px;border:1px solid var(--line)}
+.aviso{border-left:4px solid var(--primary);font-size:14px}
 
-/* painel do tanque */
-.tank{background:var(--tank-bg);color:var(--tank-fg);border-radius:16px;overflow:hidden}
-.tank::before{content:"";display:block;height:6px;
-  background:repeating-linear-gradient(90deg,var(--amber) 0 26px,transparent 26px 44px)}
-.tank-in{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px}
-.tank small,.tank .lbl{color:var(--tank-muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
-.tank-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
-.tank-head span{color:var(--tank-muted);font-size:13px}
-.lucro{font-size:46px;font-weight:700;line-height:1}
-.lucro.pos{color:var(--tank-good)} .lucro.neg{color:var(--tank-bad)}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--tank-line);padding-top:12px}
-.grid3 .num{font-size:20px;font-weight:600;display:block}
-.gauge{display:flex;flex-direction:column;gap:5px}
-.gauge-bar{height:10px;border-radius:5px;background:var(--tank-line);overflow:hidden}
-.gauge-bar i{display:block;height:100%;background:var(--amber);border-radius:5px}
-.gauge-leg{display:flex;justify-content:space-between;font-size:12px;color:var(--tank-muted)}
-.tank .nota{font-size:12.5px;color:var(--tank-muted);margin:0}
-.link{background:none;border:0;padding:0;text-decoration:underline;color:inherit}
+.hero{background:var(--hero);color:var(--hero-fg);border:none;overflow:hidden;padding:0}
+.hero::before{content:"";display:block;height:6px;background:repeating-linear-gradient(90deg,var(--primary) 0 26px,transparent 26px 44px)}
+.hero-in{padding:14px 16px 16px}
+.hero .lbl{opacity:.85;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hero .big{font-size:36px;font-weight:700;letter-spacing:-.02em;margin:2px 0 10px;font-variant-numeric:tabular-nums}
+.hero .big.pos{color:var(--hero-ok)} .hero .big.neg{color:var(--hero-bad)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trio div{background:rgba(255,255,255,.1);border-radius:12px;padding:8px 10px;min-width:0}
+.trio span{display:flex;align-items:center;gap:5px;font-size:12px;opacity:.9;min-height:22px}
+.trio b{font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.meter{height:8px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;margin:12px 0 6px}
+.meter i{display:block;height:100%;background:var(--primary)}
+.hero p{margin:6px 0 0;font-size:13px;opacity:.85}
+.hero ol{margin:6px 0 0;padding-left:20px;font-size:15px} .hero li{padding:4px 0}
+.link{background:none;border:0;padding:0;text-decoration:underline;color:var(--primary-text);font-weight:600}
 
-.acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 10px;font-weight:600;font-size:15px}
-.btn.pri{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
-.btn.danger{color:var(--bad)}
+.marca{display:inline-grid;place-items:center;border-radius:7px;font-weight:800;letter-spacing:-.03em;flex:none;line-height:1;height:22px;padding:0 6px;font-size:12px;vertical-align:middle}
+.marca.u{background:var(--uber);color:var(--uber-fg);box-shadow:0 0 0 1px rgba(255,255,255,.35)}
+.marca.n{background:var(--n99);color:var(--n99-fg);font-size:14px}
 
-.sec{display:flex;flex-direction:column;gap:8px}
-.sec-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.lista{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line)}
-.item:first-child{border-top:0}
-.item .t{font-weight:600}
-.item .v{font-family:var(--display);font-variant-numeric:tabular-nums;font-size:18px;font-weight:600;text-align:right}
-.item .d{grid-column:1/-1;color:var(--muted);font-size:13px;min-width:0}
-.pos{color:var(--good)} .neg{color:var(--bad)}
-.tank .pos{color:var(--tank-good)} .tank .neg{color:var(--tank-bad)}
-.chip{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;margin-right:4px;vertical-align:1px}
-.chip.u{background:var(--ink);color:var(--surface)} .chip.n{background:var(--amber);color:var(--amber-ink)}
-.vazio{color:var(--muted);padding:14px;margin:0;font-size:14px}
+.btn{border:none;border-radius:12px;padding:13px 16px;background:var(--primary);color:var(--on-primary);font-weight:600}
+.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:var(--danger-soft);color:var(--danger)}
+.btn.full{width:100%}
+.andamento{display:flex;align-items:center;gap:12px;border-color:var(--primary)}
+.andamento .mid{flex:1;min-width:0}
 
-.mes-nav{display:flex;align-items:center;gap:6px}
-.mes-nav button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1}
-.mes-nav b{min-width:112px;text-align:center;font-weight:600}
-.tabela{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 14px}
-.linha{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
-.linha:first-child{border-top:0}
-.linha .num{font-size:17px;font-weight:600}
-.linha.total{font-weight:600} .linha.total .num{font-size:22px}
+.item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left}
+.item:first-child{border-top:none;padding-top:0} .item:last-child{padding-bottom:0}
+.ico{width:40px;height:40px;border-radius:12px;background:var(--primary-soft);display:grid;place-items:center;font-size:20px;flex:none}
+.item .mid{flex:1;min-width:0}
+.t{font-weight:600}
+.s{font-size:13px;color:var(--muted);margin-top:2px}
+.s .marca{margin-right:3px}
+.item .v{font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.item .v small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.pos{color:var(--ok)} .neg{color:var(--danger)}
+.empty{text-align:center;color:var(--muted);padding:18px 10px;margin:0}
 
-details.fechado{border-top:1px solid var(--line)}
-details.fechado:first-child{border-top:0}
-details.fechado summary{list-style:none;cursor:pointer}
-details.fechado summary::-webkit-details-marker{display:none}
-details.fechado .dentro{padding:0 14px 12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--muted)}
-details.fechado .dentro button{align-self:flex-start}
+.linha{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-top:1px dashed var(--line)}
+.linha:first-child{border-top:0;padding-top:0} .linha:last-child{padding-bottom:0}
+.linha b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.linha.total{font-weight:700;border-top-style:solid} .linha.total b{font-size:20px}
+.linha small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.monthnav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
+.monthnav b{font-size:18px}
+.tanque-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.tanque-top b{font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--primary-soft);color:var(--primary-text);font-weight:700}
+details summary{cursor:pointer;color:var(--primary-text);font-weight:600;font-size:14px;margin-top:10px}
+details .lista{margin-top:10px}
+.tablewrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--card);margin-bottom:12px}
+table{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:600;background:var(--card);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card);z-index:1;border-right:1px solid var(--line)}
+th:first-child{z-index:2}
+tr.dia td{background:var(--primary-soft);font-weight:700}
+tr.dia td:first-child{background:var(--primary-soft)}
+tr.abast td{color:var(--muted);font-style:italic}
+tr.parc{cursor:pointer}
+tr.total td{font-weight:800;font-size:14px;background:var(--bg)}
+tr.total td:first-child{background:var(--bg)}
+td .marca{height:18px;font-size:11px;padding:0 5px}
 
-.passos{margin:0;padding:6px 14px 6px 34px}
-.passos li{padding:6px 0}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;z-index:10;
+  padding:6px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px))}
+nav.tabs button{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--muted);padding:6px 4px;border-radius:10px;flex:1;max-width:130px}
+nav.tabs button b{font-size:21px;font-weight:400;line-height:1}
+nav.tabs button.on{color:var(--primary-text);background:var(--primary-soft);font-weight:600}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:18px;border:none;background:var(--primary);color:var(--on-primary);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:11}
 
-/* folha de lançamento */
-.folha-fundo{position:fixed;inset:0;background:var(--shade);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.folha{background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:100%;overflow:auto;
-  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  display:flex;flex-direction:column;gap:12px}
-.campo{display:flex;flex-direction:column;gap:4px}
-.campo label{font-size:13px;font-weight:500;color:var(--muted)}
-.campo input{font:600 20px var(--display);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
-.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dica{font-size:13px;color:var(--muted);margin:0;min-height:1.4em}
-.erro{color:var(--bad);font-size:13.5px;margin:0}
-.folha-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+.fundo{position:fixed;inset:0;background:var(--shade);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.folha{background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;max-height:100%;overflow:auto;
+  padding:18px max(18px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+.folha h3{margin:0 0 14px;font-size:19px}
+label.f{display:block;margin-bottom:12px;font-size:13px;color:var(--muted);font-weight:600}
+label.f input{display:block;width:100%;min-width:0;margin-top:5px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;font-weight:400;color:var(--text)}
+label.f .marca{margin-right:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.preview{background:var(--primary-soft);color:var(--primary-text);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.erro{background:var(--danger-soft);color:var(--danger);border-radius:12px;padding:10px 12px;font-size:14px;margin:0 0 12px}
+.actions{display:flex;gap:10px;margin-top:6px} .actions .btn{flex:1}
+.menu button.op{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--bg);margin-bottom:10px;text-align:left;font-weight:600}
+.menu button.op span{font-size:26px}
+.menu button.op small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(156px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 </style>
 
-<div class="wrap">
-  <div class="top">
-    <h1>Rodagem Uber e 99</h1>
-    <div class="status" id="status">Carregando…</div>
-  </div>
-  <div id="aviso" class="aviso" hidden></div>
-  <div id="app" class="wrap" style="max-width:none"><p class="vazio">Carregando seus lançamentos…</p></div>
+<header class="top"><div class="wrap">
+  <img class="logo" alt="" src="data:image/png;base64,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">
+  <div style="flex:1;min-width:0"><h1>Rodagem Uber e 99</h1><div class="status" id="status">Carregando…</div></div>
+  <button class="iconbtn" data-ajustes aria-label="Ajustes" title="Ajustes">⚙️</button>
+</div></header>
+
+<main class="wrap">
+  <div id="aviso" class="card aviso" hidden></div>
+  <div id="view"><p class="empty">Carregando seus lançamentos…</p></div>
+</main>
+
+<button class="fab" id="fab" aria-label="Adicionar">+</button>
+<nav class="tabs">
+  <button data-tab="resumo" class="on"><b>🏠</b>Resumo</button>
+  <button data-tab="tanques"><b>⛽</b>Tanques</button>
+  <button data-tab="historico"><b>📋</b>Histórico</button>
+  <button data-tab="mes"><b>📊</b>Mês</button>
+</nav>
+
+<div class="fundo" id="folhaMenu" hidden><div class="folha menu">
+  <h3>O que você quer lançar?</h3>
+  <button class="op" data-novo="iniciar" id="opIniciar"><span>▶️</span><div>Iniciar parcial<small>Vou sair para rodar agora: marca a hora e o km</small></div></button>
+  <button class="op" data-novo="encerrar" id="opEncerrar"><span>⏹️</span><div>Encerrar parcial<small>Parei de rodar: hora, km final e ganhos</small></div></button>
+  <button class="op" data-novo="completa"><span>📝</span><div>Parcial já terminada<small>Lançar de uma vez uma saída que já acabou</small></div></button>
+  <button class="op" data-novo="abast"><span>⛽</span><div>Abastecimento<small>Fecha o tanque anterior e calcula a média</small></div></button>
+  <button class="btn ghost full" data-fechar>Cancelar</button>
+</div></div>
+
+<div class="fundo" id="folhaParcial" hidden>
+  <form class="folha" id="formParcial" autocomplete="off">
+    <h3 id="tituloParcial">Parcial</h3>
+    <label class="f">Data<input id="pData" type="date" required></label>
+    <div class="grid2">
+      <label class="f">Começou às<input id="pHIni" type="time"></label>
+      <label class="f">Km do painel na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 85430"></label>
+    </div>
+    <div id="pFim">
+      <div class="grid2">
+        <label class="f">Terminou às<input id="pHFim" type="time"></label>
+        <label class="f">Km do painel ao parar<input id="pKm" inputmode="numeric" placeholder="ex.: 85610"></label>
+      </div>
+      <div class="grid2">
+        <label class="f"><span class="marca u">Uber</span>Ganho (R$)<input id="pUber" inputmode="decimal" placeholder="0,00"></label>
+        <label class="f"><span class="marca n">99</span>Ganho (R$)<input id="p99" inputmode="decimal" placeholder="0,00"></label>
+      </div>
+      <label class="f">🍔 Lanche e outros gastos (R$)<input id="pLanche" inputmode="decimal" placeholder="0,00"></label>
+    </div>
+    <div class="preview" id="pPrev" hidden></div>
+    <p class="erro" id="pErro" hidden></p>
+    <div class="actions">
+      <button type="button" class="btn danger" id="pExcluir" hidden>Excluir</button>
+      <button type="button" class="btn ghost" data-fechar>Cancelar</button>
+      <button type="submit" class="btn" id="pSalvar">Salvar</button>
+    </div>
+  </form>
 </div>
 
-<div class="folha-fundo" id="folhaAbast" hidden>
+<div class="fundo" id="folhaAbast" hidden>
   <form class="folha" id="formAbast" autocomplete="off">
-    <h2 id="tituloAbast">Abastecer</h2>
-    <div class="campo"><label for="aData">Data</label><input id="aData" type="date" required></div>
-    <div class="duas">
-      <div class="campo"><label for="aValor">Valor pago (R$)</label><input id="aValor" inputmode="decimal" placeholder="0,00"></div>
-      <div class="campo"><label for="aLitros">Litros</label><input id="aLitros" inputmode="decimal" placeholder="0,0"></div>
+    <h3 id="tituloAbast">Abastecimento</h3>
+    <label class="f">Data<input id="aData" type="date" required></label>
+    <div class="grid2">
+      <label class="f">Valor pago (R$)<input id="aValor" inputmode="decimal" placeholder="0,00"></label>
+      <label class="f">Litros<input id="aLitros" inputmode="decimal" placeholder="0,0"></label>
     </div>
-    <div class="campo"><label for="aKm">Km do painel na hora de abastecer</label><input id="aKm" inputmode="numeric" placeholder="ex.: 85320"></div>
-    <p class="dica" id="aDica"></p>
+    <label class="f">Km do painel na hora de abastecer<input id="aKm" inputmode="numeric" placeholder="ex.: 85320"></label>
+    <div class="preview" id="aPrev" hidden></div>
     <p class="erro" id="aErro" hidden></p>
-    <div class="folha-acoes">
-      <button type="button" class="btn" data-fechar>Cancelar</button>
-      <button type="submit" class="btn pri">Salvar</button>
+    <div class="actions">
+      <button type="button" class="btn danger" id="aExcluir" hidden>Excluir</button>
+      <button type="button" class="btn ghost" data-fechar>Cancelar</button>
+      <button type="submit" class="btn">Salvar</button>
     </div>
-    <button type="button" class="btn danger" id="aExcluir" hidden>Excluir abastecimento</button>
   </form>
 </div>
 
-<div class="folha-fundo" id="folhaDia" hidden>
-  <form class="folha" id="formDia" autocomplete="off">
-    <h2 id="tituloDia">Lançar parcial</h2>
-    <div class="campo"><label for="dData">Data</label><input id="dData" type="date" required></div>
-    <div class="duas">
-      <div class="campo"><label for="dUber">Ganho na Uber (R$)</label><input id="dUber" inputmode="decimal" placeholder="0,00"></div>
-      <div class="campo"><label for="d99">Ganho na 99 (R$)</label><input id="d99" inputmode="decimal" placeholder="0,00"></div>
-    </div>
-    <div class="campo"><label for="dLanche">Lanche e outros gastos (R$)</label><input id="dLanche" inputmode="decimal" placeholder="0,00"></div>
-    <div class="duas">
-      <div class="campo"><label for="dKm">Km do painel ao parar</label><input id="dKm" inputmode="numeric" placeholder="ex.: 85510"></div>
-      <div class="campo"><label for="dRod">ou km rodados na saída</label><input id="dRod" inputmode="numeric" placeholder="ex.: 190"></div>
-    </div>
-    <p class="dica" id="dDica"></p>
-    <p class="dica">Preencha um dos dois: o km do painel ou quanto rodou. Com isso o app mostra os km e a gasolina de cada saída. Sem nenhum, a parcial entra só com o ganho e o lanche.</p>
-    <p class="erro" id="dErro" hidden></p>
-    <div class="folha-acoes">
-      <button type="button" class="btn" data-fechar>Cancelar</button>
-      <button type="submit" class="btn pri">Salvar</button>
-    </div>
-    <button type="button" class="btn danger" id="dExcluir" hidden>Excluir esta parcial</button>
-  </form>
-</div>
-
-<div class="folha-fundo" id="folhaMedia" hidden>
-  <form class="folha" id="formMedia" autocomplete="off">
-    <h2>Ajustes</h2>
-    <p class="dica">Usada para estimar o gasto de gasolina enquanto nenhum tanque foi fechado. Depois do segundo abastecimento o app passa a usar a média real do seu carro.</p>
-    <div class="campo"><label for="mMedia">Média de referência (km por litro)</label><input id="mMedia" inputmode="decimal" placeholder="10"></div>
-    <div class="campo"><label for="mReserva">Reserva de manutenção (% do lucro)</label><input id="mReserva" inputmode="decimal" placeholder="0"></div>
-    <p class="dica">A reserva separa uma parte do lucro de cada tanque e do mês para manutenção do carro. Deixe 0 para não separar nada.</p>
+<div class="fundo" id="folhaAjustes" hidden>
+  <form class="folha" id="formAjustes" autocomplete="off">
+    <h3>Ajustes</h3>
+    <label class="f">Média de referência (km por litro)<input id="mMedia" inputmode="decimal" placeholder="10"></label>
+    <p class="s" style="margin:-6px 0 12px">Usada para estimar a gasolina enquanto nenhum tanque foi fechado. Depois o app usa a média real do carro.</p>
+    <label class="f">Reserva de manutenção (% do lucro)<input id="mReserva" inputmode="decimal" placeholder="0"></label>
+    <p class="s" style="margin:-6px 0 12px">Separa uma parte do lucro de cada tanque e do mês para manutenção. Deixe 0 para não separar.</p>
     <p class="erro" id="mErro" hidden></p>
-    <div class="folha-acoes">
-      <button type="button" class="btn" data-fechar>Cancelar</button>
-      <button type="submit" class="btn pri">Salvar</button>
+    <div class="actions">
+      <button type="button" class="btn ghost" data-fechar>Cancelar</button>
+      <button type="submit" class="btn">Salvar</button>
     </div>
   </form>
 </div>
@@ -175,17 +221,25 @@ details.fechado .dentro button{align-self:flex-start}
 
 <script>
 // ---------- contas (função pura) ----------
+function horasDe(d){
+  if (!d.hIni || !d.hFim) return null;
+  const [a, b] = d.hIni.split(':').map(Number), [c, e] = d.hFim.split(':').map(Number);
+  let m = (c * 60 + e) - (a * 60 + b);
+  if (m < 0) m += 1440;                      // virou a meia-noite
+  return m / 60;
+}
 function calcular(regs, mediaPadrao, reservaPct){
   const abs = regs.filter(r => r.tipo === 'abast');
-  const dias = regs.filter(r => r.tipo === 'dia');
+  const dias = regs.filter(r => r.tipo === 'dia' && !r.aberta);
   const ordem = (a, b) => {
     if (a.data !== b.data) return a.data < b.data ? -1 : 1;
     if (a.tipo !== b.tipo){
       const ab = a.tipo === 'abast' ? a : b, di = a.tipo === 'dia' ? a : b;
-      const abPrimeiro = !(di.km > 0) || di.km > ab.km;   // dia sem km, ou que terminou depois do posto
+      const abPrimeiro = !(di.km > 0) || di.km > ab.km;   // parcial sem km, ou que terminou depois do posto
       return (a === ab) === abPrimeiro ? -1 : 1;
     }
     if (a.km > 0 && b.km > 0 && a.km !== b.km) return a.km - b.km;
+    if (a.hIni && b.hIni && a.hIni !== b.hIni) return a.hIni < b.hIni ? -1 : 1;
     return (a.criado || 0) - (b.criado || 0);
   };
   const seq = [...abs, ...dias].sort(ordem);
@@ -207,16 +261,17 @@ function calcular(regs, mediaPadrao, reservaPct){
   });
   const mediaGeral = lTot > 0 ? kmTot / lTot : null;
   const mediaRef = mediaGeral || mediaPadrao || 10;
+  const base = d => { d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0; d.horas = horasDe(d); };
+  const soma = (l, f) => l.reduce((s, d) => s + (f(d) || 0), 0);
   for (const t of tanques){
     let ultimo = t.abast.km;
     for (const d of t.dias){
-      d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0;
-      if (d.km > 0 && d.km >= ultimo){ d.rodou = d.km - ultimo; ultimo = d.km; d.acum = ultimo - t.abast.km; } else d.rodou = null;
+      base(d);
+      const ini = d.kmIni > 0 ? d.kmIni : ultimo;
+      if (d.km > 0 && d.km >= ini){ d.rodou = d.km - ini; if (d.km > ultimo) ultimo = d.km; d.acum = ultimo - t.abast.km; } else d.rodou = null;
     }
-    t.uber = t.dias.reduce((s, d) => s + (d.uber || 0), 0);
-    t.n99 = t.dias.reduce((s, d) => s + (d.n99 || 0), 0);
-    t.ganho = t.uber + t.n99;
-    t.lanche = t.dias.reduce((s, d) => s + d.lanche, 0);
+    t.uber = soma(t.dias, d => d.uber); t.n99 = soma(t.dias, d => d.n99); t.ganho = t.uber + t.n99;
+    t.lanche = soma(t.dias, d => d.lanche); t.horas = soma(t.dias, d => d.horas); t.kmParc = soma(t.dias, d => d.rodou);
     if (t.fechado){
       t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
       t.gasto = t.abast.valor;
@@ -230,12 +285,18 @@ function calcular(regs, mediaPadrao, reservaPct){
     t.lucro = t.ganho - t.gasto - t.lanche;
     t.reserva = t.lucro > 0 ? t.lucro * (reservaPct || 0) / 100 : 0;
     t.livre = t.lucro - t.reserva;
+    t.porHora = t.horas > 0 ? t.lucro / t.horas : null;
+    t.lucroUber = t.ganho > 0 ? t.lucro * t.uber / t.ganho : 0;   // gasolina e lanche divididos na proporção do ganho
+    t.lucro99 = t.ganho > 0 ? t.lucro * t.n99 / t.ganho : 0;
     for (const d of t.dias){
       d.custo = d.rodou != null && t.custoKm != null ? d.rodou * t.custoKm : null;
       d.lucro = d.custo != null ? d.ganho - d.custo - d.lanche : null;
     }
   }
-  for (const d of soltos){ d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0; d.rodou = null; d.custo = null; d.lucro = null; }
+  for (const d of soltos){
+    base(d);
+    d.rodou = d.kmIni > 0 && d.km >= d.kmIni ? d.km - d.kmIni : null; d.custo = null; d.lucro = null;
+  }
   return {tanques, soltos, mediaGeral, mediaRef};
 }
 
@@ -243,13 +304,15 @@ function calcular(regs, mediaPadrao, reservaPct){
 const R$ = v => (v < 0 ? '−' : '') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const n1 = v => v.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1});
 const n0 = v => Math.round(v).toLocaleString('pt-BR');
+const hm = h => { const m = Math.round(h * 60); return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0'); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const p2 = n => String(n).padStart(2, '0');
+const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
+const agora = () => { const d = new Date(); return p2(d.getHours()) + ':' + p2(d.getMinutes()); };
 function dataBR(iso, comSemana){
   const [a, m, d] = String(iso).split('-').map(Number);
   if (!a || !m || !d) return esc(iso);
-  const dt = new Date(a, m - 1, d);
-  return dt.toLocaleDateString('pt-BR', comSemana ? {weekday: 'short', day: '2-digit', month: '2-digit'} : {day: '2-digit', month: '2-digit'}).replace('.', '');
+  return new Date(a, m - 1, d).toLocaleDateString('pt-BR', comSemana ? {weekday: 'short', day: '2-digit', month: '2-digit'} : {day: '2-digit', month: '2-digit'}).replace('.', '');
 }
 function lerValor(txt){
   let s = String(txt || '').trim().replace(/[^\d.,]/g, '');
@@ -260,6 +323,8 @@ function lerValor(txt){
 }
 const lerKm = txt => parseInt(String(txt || '').replace(/\D/g, ''), 10) || 0;
 const paraCampo = (v, casas) => v ? v.toLocaleString('pt-BR', {minimumFractionDigits: casas, maximumFractionDigits: casas, useGrouping: false}) : '';
+const cor = v => v < 0 ? 'neg' : 'pos';
+const U = '<span class="marca u">Uber</span>', N = '<span class="marca n">99</span>';
 
 // ---------- estado e armazenamento ----------
 const $ = id => document.getElementById(id);
@@ -269,11 +334,11 @@ let config = {mediaPadrao: 10, reservaPct: 0};
 let col = null;                 // coleção no banco (null = guardando só neste aparelho)
 let pronto = false;
 let mesVisto = hoje().slice(0, 7);
-let editando = null;
+let aba = 'resumo';
+let editando = null, modoParcial = 'completa';
+try { aba = localStorage.getItem('rodagem-aba') || 'resumo'; } catch (e) {}
 
-function salvarLocal(){
-  try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {}
-}
+function salvarLocal(){ try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {} }
 function novoId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 async function gravar(id, dados){
   if (col){ await col.doc(id).set(dados); }
@@ -291,14 +356,13 @@ function modoLocal(motivo){
   col = null;
   try {
     const g = JSON.parse(localStorage.getItem(LOCAL) || 'null');
-    if (g){ regs = new Map(g.regs || []); config = g.config || config; }
+    if (g){ regs = new Map(g.regs || []); config = Object.assign(config, g.config || {}); }
   } catch (e) {}
   pronto = true;
   $('status').textContent = 'Só neste aparelho';
   aviso(motivo);
   render();
 }
-
 async function iniciar(){
   let db = null, user = null, uid = null;
   try {
@@ -335,20 +399,159 @@ async function iniciar(){
 }
 
 // ---------- tela ----------
-function listaDias(dias, noTanque){
-  if (!dias.length) return '<p class="vazio">Nenhuma parcial lançada ainda neste tanque.</p>';
+function parcialAberta(){ for (const [id, r] of regs) if (r.tipo === 'dia' && r.aberta) return {...r, id}; return null; }
+function haQuanto(p){
+  const [a, m, d] = p.data.split('-').map(Number), [h, mi] = (p.hIni || '00:00').split(':').map(Number);
+  const min = (Date.now() - new Date(a, m - 1, d, h, mi).getTime()) / 60000;
+  return min >= 0 && min < 2880 ? hm(min / 60) : '';
+}
+function listaParciais(dias){
+  if (!dias.length) return '<p class="empty">Nenhuma parcial lançada ainda neste tanque.<br>Toque no + quando sair para rodar.</p>';
   return [...dias].reverse().map(d => {
-    const partes = [];
-    if (d.uber) partes.push('<span class="chip u">Uber</span>' + R$(d.uber));
-    if (d.n99) partes.push('<span class="chip n">99</span>' + R$(d.n99));
-    if (d.lanche) partes.push('lanche/gastos ' + R$(d.lanche));
-    let det = partes.join(' &nbsp; ');
-    if (d.rodou != null) det += (det ? '<br>' : '') + '<b>' + n0(d.rodou) + ' km nesta saída</b> · ' + n0(d.acum) + ' km no tanque<br>gasolina ' + R$(d.custo) + (d.rodou > 0 ? ' · ' + R$(d.ganho / d.rodou) + ' por km' : '');
-    else if (noTanque) det += (det ? '<br>' : '') + (d.km > 0 ? 'Km do painel menor que o anterior, confira' : 'Sem km do painel');
+    const hora = d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '';
+    const ganhos = [];
+    if (d.uber) ganhos.push(U + R$(d.uber));
+    if (d.n99) ganhos.push(N + R$(d.n99));
+    const info = [];
+    if (d.rodou != null) info.push('<b>' + n0(d.rodou) + ' km</b>' + (d.acum != null ? ' (' + n0(d.acum) + ' no tanque)' : ''));
+    else info.push(d.km > 0 ? 'km do painel fora de ordem, confira' : 'sem km');
+    if (d.horas != null) info.push(hm(d.horas));
+    const gastos = [];
+    if (d.custo != null) gastos.push('gasolina ' + R$(d.custo));
+    if (d.lanche) gastos.push('lanche ' + R$(d.lanche));
     const v = d.lucro != null ? d.lucro : d.ganho - d.lanche;
-    return '<button class="item" data-editar="' + esc(d.id) + '"><span class="t">' + dataBR(d.data, true) + '</span>' +
-      '<span class="v ' + (v < 0 ? 'neg' : 'pos') + '">' + R$(v) + '</span><span class="d">' + det + '</span></button>';
+    return '<button class="item" data-editar="' + esc(d.id) + '"><span class="ico">🚗</span>' +
+      '<span class="mid"><span class="t">' + dataBR(d.data, true) + hora + '</span>' +
+      (ganhos.length ? '<span class="s" style="display:block">' + ganhos.join(' &nbsp; ') + '</span>' : '') +
+      '<span class="s" style="display:block">' + info.join(' · ') + '</span>' +
+      (gastos.length ? '<span class="s" style="display:block">' + gastos.join(' · ') + '</span>' : '') + '</span>' +
+      '<span class="v ' + cor(v) + '">' + R$(v) + (d.horas > 0 ? '<small>' + R$(v / d.horas) + ' por hora</small>' : '') + '</span></button>';
   }).join('');
+}
+const linha = (rot, val, cls, sub) => '<div class="linha' + (cls ? ' ' + cls : '') + '"><span>' + rot + (sub ? '<small>' + sub + '</small>' : '') + '</span><b>' + val + '</b></div>';
+
+function telaResumo(c, pct){
+  const atual = c.tanques.length ? c.tanques[c.tanques.length - 1] : null;
+  let h = '';
+  if (!atual){
+    h += '<div class="card hero"><div class="hero-in"><div class="lbl"><span>Como funciona</span></div>' +
+      '<ol><li>Abasteceu? Toque no + e lance o valor, os litros e o km do painel.</li>' +
+      '<li>Ao sair para rodar, inicie uma parcial: o app marca a hora e o km.</li>' +
+      '<li>Ao parar, encerre a parcial com o km final e o que fez na Uber e na 99.</li>' +
+      '<li>No próximo abastecimento o tanque fecha com a média km/l e o lucro.</li></ol></div></div>';
+  } else {
+    const a = atual.abast, cheio = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
+    h += '<div class="card hero"><div class="hero-in">' +
+      '<div class="lbl"><span>Lucro parcial do tanque</span><span>abastecido ' + dataBR(a.data, true) + '</span></div>' +
+      '<div class="big ' + cor(atual.lucro) + '">' + R$(atual.lucro) + '</div>' +
+      '<div class="trio"><div><span>' + U + '</span><b>' + R$(atual.uber) + '</b></div>' +
+      '<div><span>' + N + '</span><b>' + R$(atual.n99) + '</b></div>' +
+      '<div><span>⛽ Gasolina</span><b>' + R$(atual.gasto) + '</b></div></div>' +
+      '<div class="trio" style="margin-top:8px"><div><span>🛣️ Rodados</span><b>' + n0(atual.km) + ' km</b></div>' +
+      '<div><span>⏱️ Horas</span><b>' + (atual.horas > 0 ? hm(atual.horas) : '–') + '</b></div>' +
+      '<div><span>Por hora</span><b>' + (atual.porHora != null ? R$(atual.porHora) : '–') + '</b></div></div>' +
+      '<div class="meter"><i style="width:' + cheio.toFixed(0) + '%"></i></div>' +
+      '<p style="margin-top:0">Restam cerca de ' + n1(atual.restoL) + ' L no tanque (' + n0(atual.restoKm) + ' km), estimando ' + n1(c.mediaRef) + ' km/l' + (c.mediaGeral ? ', a média real do carro.' : ' de referência.') + '</p>' +
+      (atual.lanche ? '<p>Lanche e outros gastos: ' + R$(atual.lanche) + ', já descontados.</p>' : '') +
+      (pct > 0 ? '<p>Reserva de manutenção (' + n0(pct) + '%): ' + R$(atual.reserva) + ' · livre para você: <b>' + R$(atual.livre) + '</b></p>' : '') +
+      '<p>' + (atual.ganho >= a.valor ? 'O tanque de ' + R$(a.valor) + ' já se pagou.' : 'Faltam ' + R$(a.valor - atual.ganho) + ' em corridas para pagar o tanque de ' + R$(a.valor) + '.') + '</p>' +
+      '</div></div>';
+  }
+  const ab = parcialAberta();
+  if (ab){
+    const ha = haQuanto(ab);
+    h += '<div class="card andamento"><span class="ico">▶️</span><span class="mid"><span class="t">Parcial em andamento</span>' +
+      '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni ? ' · saiu com ' + n0(ab.kmIni) + ' km' : '') + '</span></span>' +
+      '<button class="btn" data-novo="encerrar">Encerrar</button></div>';
+  } else if (atual){
+    h += '<button class="btn full" data-novo="iniciar" style="margin-bottom:12px">▶ Iniciar parcial</button>';
+  }
+  if (atual) h += '<h2>Parciais deste tanque<span>' + n0(atual.kmParc) + ' km em corridas</span></h2><div class="card">' + listaParciais(atual.dias) + '</div>';
+  if (c.soltos.length) h += '<h2>Parciais antes do primeiro abastecimento</h2><div class="card">' + listaParciais(c.soltos) + '</div>';
+  return h;
+}
+
+function telaTanques(c, pct){
+  if (!c.tanques.length) return '<div class="card"><p class="empty">Nenhum abastecimento lançado.<br>Toque no + e escolha Abastecimento.</p></div>';
+  let h = c.mediaGeral ? '<h2 style="margin-top:6px">Média geral do carro<span>' + n1(c.mediaGeral) + ' km/l</span></h2>' : '<h2 style="margin-top:6px">Tanques</h2>';
+  for (const t of [...c.tanques].reverse()){
+    const a = t.abast, fora = t.km - t.kmParc;
+    h += '<div class="card"><div class="tanque-top"><span><span class="t">' + dataBR(a.data) + (t.fechado ? ' a ' + dataBR(t.fim.data) : '') + '</span> ' +
+      (t.fechado ? '' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</b></div>';
+    if (t.fechado && t.media == null) h += '<p class="erro">O km do painel dos abastecimentos está fora de ordem. Confira os valores.</p>';
+    h += linha('🛣️ Km rodados no tanque', n0(t.km) + ' km', '', n0(t.kmParc) + ' km em corridas' + (fora > 0 ? ' · ' + n0(fora) + ' km fora das parciais' : '')) +
+      linha('⛽ Abastecimento', R$(a.valor), '', n1(a.litros) + ' L a ' + R$(t.preco) + ' · painel em ' + n0(a.km) + ' km') +
+      (t.fechado ? linha('Média do tanque', t.media != null ? n1(t.media) + ' km/l' : '–', '', t.custoKm != null ? R$(t.custoKm) + ' de gasolina por km' : '') :
+        linha('Média do tanque', 'ao abastecer', '', 'Sai quando você lançar o próximo abastecimento')) +
+      linha('⏱️ Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.porHora != null ? R$(t.porHora) + ' de lucro por hora' : '') +
+      linha(U + ' Ganho', R$(t.uber), '', 'lucro proporcional ' + R$(t.lucroUber)) +
+      linha(N + ' Ganho', R$(t.n99), '', 'lucro proporcional ' + R$(t.lucro99)) +
+      (t.lanche ? linha('🍔 Lanche e outros gastos', R$(-t.lanche)) : '') +
+      (pct > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre), 'total') : '') +
+      '<details><summary>Ver as parciais (' + t.dias.length + ')</summary><div class="lista">' + listaParciais(t.dias) + '</div></details>' +
+      '<button class="link" data-editar="' + esc(a.id) + '" style="margin-top:10px">Corrigir abastecimento</button></div>';
+  }
+  return h;
+}
+
+function telaMes(c, lista, pct){
+  const dias = [...c.soltos, ...c.tanques.flatMap(t => t.dias)].filter(d => d.data.slice(0, 7) === mesVisto);
+  const soma = f => dias.reduce((s, d) => s + (f(d) || 0), 0);
+  const uber = soma(d => d.uber), n99 = soma(d => d.n99), lanche = soma(d => d.lanche), km = soma(d => d.rodou), horas = soma(d => d.horas);
+  const comb = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto).reduce((s, r) => s + r.valor, 0);
+  const nDias = new Set(dias.map(d => d.data)).size, ganho = uber + n99;
+  const lucro = ganho - comb - lanche, reserva = lucro > 0 ? lucro * pct / 100 : 0;
+  const [ma, mm] = mesVisto.split('-').map(Number);
+  const nome = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'});
+  return '<div class="monthnav"><button class="iconbtn" data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nome + '</b><button class="iconbtn" data-mes="1" aria-label="Próximo mês">›</button></div>' +
+    '<div class="card">' +
+    linha(U + ' Ganhos', R$(uber), '', ganho > 0 ? 'lucro proporcional ' + R$(lucro * uber / ganho) : '') +
+    linha(N + ' Ganhos', R$(n99), '', ganho > 0 ? 'lucro proporcional ' + R$(lucro * n99 / ganho) : '') +
+    linha('⛽ Gasolina paga no mês', '<span class="neg">' + R$(-comb) + '</span>') +
+    (lanche ? linha('🍔 Lanche e outros gastos', '<span class="neg">' + R$(-lanche) + '</span>') : '') +
+    linha('Lucro do mês', '<span class="' + cor(lucro) + '">' + R$(lucro) + '</span>', 'total') +
+    (pct > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(reserva)) + linha('Livre para você', '<span class="' + cor(lucro) + '">' + R$(lucro - reserva) + '</span>', 'total') : '') +
+    '</div><div class="card">' +
+    linha('📅 Dias rodados', String(nDias), '', dias.length + ' parciais') +
+    linha('🛣️ Km em corridas', n0(km) + ' km', '', km > 0 ? R$(ganho / km) + ' de ganho por km' : '') +
+    linha('⏱️ Horas trabalhadas', horas > 0 ? hm(horas) : '–', '', horas > 0 ? R$(lucro / horas) + ' de lucro por hora' : '') +
+    (nDias ? linha('Ganho médio por dia', R$(ganho / nDias)) : '') +
+    '</div>';
+}
+
+function telaHistorico(c, lista, pct){
+  const dias = [...c.soltos, ...c.tanques.flatMap(t => t.dias)].filter(d => d.data.slice(0, 7) === mesVisto);
+  const abs = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto);
+  const [ma, mm] = mesVisto.split('-').map(Number);
+  const nome = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'});
+  let h = '<div class="monthnav"><button class="iconbtn" data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nome + '</b><button class="iconbtn" data-mes="1" aria-label="Próximo mês">›</button></div>';
+  if (!dias.length && !abs.length) return h + '<div class="card"><p class="empty">Nada lançado neste mês.</p></div>';
+  const datas = [...new Set([...dias.map(d => d.data), ...abs.map(a => a.data)])].sort().reverse();
+  const v = x => x ? R$(x) : '–';
+  const tot = {km: 0, horas: 0, uber: 0, n99: 0, lanche: 0, gas: 0, lucro: 0, comb: 0};
+  h += '<div class="tablewrap"><table><thead><tr><th>Dia / saída</th><th>Km</th><th>Horas</th><th>' + U + '</th><th>' + N + '</th><th>Lanche</th><th>Gasolina</th><th>Lucro</th><th>R$/hora</th></tr></thead><tbody>';
+  for (const dt of datas){
+    const ps = dias.filter(d => d.data === dt).sort((a, b) => (a.hIni || '') < (b.hIni || '') ? -1 : 1);
+    const ab = abs.filter(a => a.data === dt);
+    const s = f => ps.reduce((x, d) => x + (f(d) || 0), 0);
+    const km = s(d => d.rodou), hr = s(d => d.horas), ub = s(d => d.uber), nn = s(d => d.n99), la = s(d => d.lanche), ga = s(d => d.custo);
+    const lu = ub + nn - la - ga;
+    Object.assign(tot, {km: tot.km + km, horas: tot.horas + hr, uber: tot.uber + ub, n99: tot.n99 + nn, lanche: tot.lanche + la, gas: tot.gas + ga, lucro: tot.lucro + lu});
+    h += '<tr class="dia"><td>' + dataBR(dt, true) + '</td><td>' + (km ? n0(km) : '–') + '</td><td>' + (hr ? hm(hr) : '–') + '</td><td>' + v(ub) + '</td><td>' + v(nn) + '</td><td>' + v(la) + '</td><td>' + v(ga) + '</td><td class="' + cor(lu) + '">' + (ps.length ? R$(lu) : '–') + '</td><td>' + (hr > 0 ? R$(lu / hr) : '–') + '</td></tr>';
+    ps.forEach((d, i) => {
+      const lu1 = d.lucro != null ? d.lucro : d.ganho - d.lanche;
+      h += '<tr class="parc" data-editar="' + esc(d.id) + '"><td>&nbsp;&nbsp;' + (i + 1) + 'ª ' + (d.hIni && d.hFim ? esc(d.hIni) + '–' + esc(d.hFim) : 'saída') + '</td><td>' + (d.rodou != null ? n0(d.rodou) : '–') +
+        '</td><td>' + (d.horas != null ? hm(d.horas) : '–') + '</td><td>' + v(d.uber) + '</td><td>' + v(d.n99) + '</td><td>' + v(d.lanche) + '</td><td>' + (d.custo != null ? R$(d.custo) : '–') +
+        '</td><td class="' + cor(lu1) + '">' + R$(lu1) + '</td><td>' + (d.horas > 0 ? R$(lu1 / d.horas) : '–') + '</td></tr>';
+    });
+    for (const a of ab){
+      tot.comb += a.valor;
+      h += '<tr class="abast" data-editar="' + esc(a.id) + '"><td>&nbsp;&nbsp;⛽ abasteceu</td><td>' + n0(a.km) + '</td><td colspan="4">' + n1(a.litros) + ' L a ' + R$(a.valor / a.litros) + '</td><td>' + R$(a.valor) + '</td><td></td><td></td></tr>';
+    }
+  }
+  h += '<tr class="total"><td>Total do mês</td><td>' + n0(tot.km) + '</td><td>' + (tot.horas ? hm(tot.horas) : '–') + '</td><td>' + R$(tot.uber) + '</td><td>' + R$(tot.n99) + '</td><td>' + R$(tot.lanche) + '</td><td>' + R$(tot.gas) + '</td><td class="' + cor(tot.lucro) + '">' + R$(tot.lucro) + '</td><td>' + (tot.horas > 0 ? R$(tot.lucro / tot.horas) : '–') + '</td></tr>';
+  h += '</tbody></table></div><p class="s">A gasolina de cada saída é a parte do tanque gasta nos km rodados. Linhas em itálico são abastecimentos (valor pago no posto). Toque numa linha para corrigir.</p>';
+  return h;
 }
 
 function render(){
@@ -356,136 +559,15 @@ function render(){
   const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
   const pct = Number(config.reservaPct) || 0;
   const c = calcular(lista, config.mediaPadrao, pct);
-  const app = $('app');
-  let h = '';
-  const atual = c.tanques.length ? c.tanques[c.tanques.length - 1] : null;
-
-  if (!atual){
-    h += '<div class="tank"><div class="tank-in"><div><small>Como funciona</small></div>' +
-      '<ol class="passos" style="padding-left:20px"><li>Abasteceu? Lance o valor, os litros e o km do painel.</li>' +
-      '<li>Cada vez que sair para rodar, lance uma parcial: ganho na Uber, na 99, lanche e o km do painel. Pode ser mais de uma por dia.</li>' +
-      '<li>No próximo abastecimento o tanque fecha e aparece a média real do carro e o lucro.</li></ol></div></div>';
-  } else {
-    const a = atual.abast, cheio = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
-    h += '<div class="tank"><div class="tank-in">' +
-      '<div class="tank-head"><small>Tanque atual · lucro parcial</small><span>abastecido ' + dataBR(a.data, true) + '</span></div>' +
-      '<div class="num lucro ' + (atual.lucro < 0 ? 'neg' : 'pos') + '">' + R$(atual.lucro) + '</div>' +
-      '<div class="grid3">' +
-        '<div><span class="lbl">Uber</span><span class="num">' + R$(atual.uber) + '</span></div>' +
-        '<div><span class="lbl">99</span><span class="num">' + R$(atual.n99) + '</span></div>' +
-        '<div><span class="lbl">Gasolina</span><span class="num">' + R$(atual.gasto) + '</span></div>' +
-      '</div>' +
-      '<div class="gauge"><div class="gauge-leg"><span>Vazio</span><span>Cheio</span></div>' +
-        '<div class="gauge-bar"><i style="width:' + cheio.toFixed(0) + '%"></i></div>' +
-        '<p class="nota">' + n0(atual.km) + ' km rodados · restam cerca de ' + n1(atual.restoL) + ' L (' + n0(atual.restoKm) + ' km)</p></div>' +
-      (atual.lanche ? '<p class="nota">Lanche e outros gastos das parciais: ' + R$(atual.lanche) + ' (já descontados do lucro).</p>' : '') +
-      (pct > 0 ? '<p class="nota">Reserva de manutenção (' + n0(pct) + '%): ' + R$(atual.reserva) + ' · livre para você: <b class="' + (atual.livre < 0 ? 'neg' : 'pos') + '">' + R$(atual.livre) + '</b></p>' : '') +
-      '<p class="nota">Abastecimento: ' + R$(a.valor) + ' · ' + n1(a.litros) + ' L · ' + R$(atual.preco) + ' o litro · painel em ' + n0(a.km) + ' km. ' +
-        '<button class="link" data-editar="' + esc(a.id) + '">Corrigir</button></p>' +
-      '<p class="nota">' + (atual.ganho >= a.valor ? 'O tanque já se pagou: sobram ' + R$(atual.ganho - a.valor) + ' acima do que você pôs de gasolina.' : 'Faltam ' + R$(a.valor - atual.ganho) + ' em corridas para pagar o tanque inteiro.') + '</p>' +
-      '<p class="nota">Gasto estimado com ' + n1(c.mediaRef) + ' km/l' + (c.mediaGeral ? ' (média real do carro).' : ' (referência).') + ' <button class="link" data-media>Ajustes</button>' + '</p>' +
-      '</div></div>';
-  }
-
-  h += '<div class="acoes"><button class="btn pri" data-novo="dia">+ Lançar parcial</button><button class="btn" data-novo="abast">⛽ Abastecer</button></div>';
-
-  if (atual){
-    h += '<div class="sec"><h2>Parciais deste tanque</h2><div class="lista">' + listaDias(atual.dias, true) + '</div></div>';
-  }
-  if (c.soltos.length){
-    h += '<div class="sec"><h2>Parciais antes do primeiro abastecimento</h2><div class="lista">' + listaDias(c.soltos, false) + '</div></div>';
-  }
-
-  // resumo do mês
-  if (lista.length){
-    const todosDias = [...c.soltos, ...c.tanques.flatMap(t => t.dias)].filter(d => d.data.slice(0, 7) === mesVisto);
-    const uber = todosDias.reduce((s, d) => s + (d.uber || 0), 0), n99 = todosDias.reduce((s, d) => s + (d.n99 || 0), 0);
-    const km = todosDias.reduce((s, d) => s + (d.rodou || 0), 0);
-    const comb = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto).reduce((s, r) => s + r.valor, 0);
-    const [ma, mm] = mesVisto.split('-').map(Number);
-    const nomeMes = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'short', year: 'numeric'}).replace('.', '').replace(' de ', '/');
-    const lanche = todosDias.reduce((s, d) => s + d.lanche, 0);
-    const nDias = new Set(todosDias.map(d => d.data)).size;
-    const lucro = uber + n99 - comb - lanche, reserva = lucro > 0 ? lucro * pct / 100 : 0;
-    h += '<div class="sec"><div class="sec-head"><h2>Resumo do mês</h2><div class="mes-nav"><button data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nomeMes + '</b><button data-mes="1" aria-label="Próximo mês">›</button></div></div>' +
-      '<div class="tabela">' +
-      '<div class="linha"><span><span class="chip u">Uber</span>Ganhos</span><span class="num">' + R$(uber) + '</span></div>' +
-      '<div class="linha"><span><span class="chip n">99</span>Ganhos</span><span class="num">' + R$(n99) + '</span></div>' +
-      '<div class="linha"><span>Gasolina paga no mês</span><span class="num neg">' + R$(-comb) + '</span></div>' +
-      (lanche ? '<div class="linha"><span>Lanche e outros gastos</span><span class="num neg">' + R$(-lanche) + '</span></div>' : '') +
-      '<div class="linha total"><span>Lucro do mês</span><span class="num ' + (lucro < 0 ? 'neg' : 'pos') + '">' + R$(lucro) + '</span></div>' +
-      (pct > 0 ? '<div class="linha"><span>Reserva de manutenção (' + n0(pct) + '%)</span><span class="num">' + R$(reserva) + '</span></div>' +
-        '<div class="linha total"><span>Livre para você</span><span class="num ' + (lucro < 0 ? 'neg' : 'pos') + '">' + R$(lucro - reserva) + '</span></div>' : '') +
-      '<div class="linha"><span>Dias rodados</span><span class="num">' + nDias + ' (' + todosDias.length + ' parciais)</span></div>' +
-      '<div class="linha"><span>Km rodados</span><span class="num">' + n0(km) + '</span></div>' +
-      (nDias ? '<div class="linha"><span>Ganho médio por dia</span><span class="num">' + R$((uber + n99) / nDias) + '</span></div>' : '') +
-      '</div></div>';
-  }
-
-  // tanques fechados
-  const fechados = c.tanques.filter(t => t.fechado).reverse();
-  if (fechados.length){
-    h += '<div class="sec"><div class="sec-head"><h2>Tanques fechados</h2>' + (c.mediaGeral ? '<span class="num" style="font-size:17px;font-weight:600">média geral ' + n1(c.mediaGeral) + ' km/l</span>' : '') + '</div><div class="lista">';
-    for (const t of fechados){
-      const ok = t.media != null;
-      h += '<details class="fechado"><summary class="item"><span class="t">' + dataBR(t.abast.data) + ' a ' + dataBR(t.fim.data) + '</span>' +
-        '<span class="v ' + (t.lucro < 0 ? 'neg' : 'pos') + '">' + R$(t.lucro) + '</span>' +
-        '<span class="d">' + (ok ? n0(t.km) + ' km · ' + n1(t.media) + ' km/l · ' + R$(t.custoKm) + ' por km' : 'Km do painel fora de ordem, confira os abastecimentos') + '</span></summary>' +
-        '<div class="dentro"><span>Gasolina: ' + R$(t.abast.valor) + ' (' + n1(t.abast.litros) + ' L a ' + R$(t.preco) + ')</span>' +
-        '<span>Ganhos: Uber ' + R$(t.uber) + ' · 99 ' + R$(t.n99) + ' · total ' + R$(t.ganho) + '</span>' +
-        (t.lanche ? '<span>Lanche e outros gastos: ' + R$(t.lanche) + '</span>' : '') +
-        (pct > 0 ? '<span>Reserva de manutenção (' + n0(pct) + '%): ' + R$(t.reserva) + ' · livre para você: ' + R$(t.livre) + '</span>' : '') +
-        '<button class="link" data-editar="' + esc(t.abast.id) + '">Corrigir abastecimento</button></div>' +
-        (t.dias.length ? '<div>' + listaDias(t.dias, true) + '</div>' : '') + '</details>';
-    }
-    h += '</div></div>';
-  }
-  h += '<button class="btn" data-media>Ajustes: média de referência e reserva de manutenção</button>';
-  app.innerHTML = h;
+  $('view').innerHTML = aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
+  for (const b of document.querySelectorAll('nav.tabs button')) b.classList.toggle('on', b.dataset.tab === aba);
 }
+setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.textContent = haQuanto(p); }, 30000);
 
 // ---------- folhas de lançamento ----------
-function fecharFolhas(){ for (const id of ['folhaAbast', 'folhaDia', 'folhaMedia']) $(id).hidden = true; editando = null; }
-function ultimoKm(){ let k = 0; for (const r of regs.values()) if (r.km > k) k = r.km; return k; }
-function armarExcluir(btn, rotulo){ btn.dataset.certo = ''; btn.textContent = rotulo; }
-
-function abrirAbast(id){
-  const r = id ? regs.get(id) : null; editando = id || null;
-  $('tituloAbast').textContent = r ? 'Corrigir abastecimento' : 'Abastecer';
-  $('aData').value = r ? r.data : hoje();
-  $('aValor').value = r ? paraCampo(r.valor, 2) : '';
-  $('aLitros').value = r ? paraCampo(r.litros, 2) : '';
-  $('aKm').value = r ? r.km : '';
-  $('aErro').hidden = true; $('aExcluir').hidden = !r; armarExcluir($('aExcluir'), 'Excluir abastecimento');
-  dicaAbast(); $('folhaAbast').hidden = false;
-}
-function dicaAbast(){
-  const v = lerValor($('aValor').value), l = lerValor($('aLitros').value), k = ultimoKm();
-  $('aDica').textContent = (v > 0 && l > 0 ? R$(v / l) + ' o litro. ' : '') + (k && !editando ? 'Último km lançado: ' + n0(k) + '.' : '');
-}
-function abrirDia(id){
-  const r = id ? regs.get(id) : null; editando = id || null;
-  $('tituloDia').textContent = r ? 'Corrigir parcial' : 'Lançar parcial';
-  $('dData').value = r ? r.data : hoje();
-  $('dUber').value = r ? paraCampo(r.uber, 2) : '';
-  $('d99').value = r ? paraCampo(r.n99, 2) : '';
-  $('dLanche').value = r ? paraCampo(r.lanche, 2) : '';
-  $('dKm').value = r && r.km ? r.km : ''; $('dRod').value = ''; dicaDia();
-  $('dErro').hidden = true; $('dExcluir').hidden = !r; armarExcluir($('dExcluir'), 'Excluir esta parcial');
-  $('folhaDia').hidden = false;
-}
-function kmBase(){   // último km lançado antes desta parcial
-  const data = $('dData').value || hoje(); let k = 0;
-  for (const [id, r] of regs) if (id !== editando && r.km > k && r.data <= data) k = r.km;
-  return k;
-}
-function dicaDia(){
-  const base = kmBase(), km = lerKm($('dKm').value), rod = lerKm($('dRod').value);
-  let t = base ? 'Último km lançado: ' + n0(base) + '. ' : '';
-  if (km > 0 && base) t += km >= base ? 'Rodou ' + n0(km - base) + ' km nesta saída.' : 'Esse km é menor que o último lançado, confira.';
-  else if (rod > 0 && base) t += 'O painel deve estar em ' + n0(base + rod) + ' km.';
-  $('dDica').textContent = t;
-}
+function fecharFolhas(){ for (const id of ['folhaMenu', 'folhaParcial', 'folhaAbast', 'folhaAjustes']) $(id).hidden = true; editando = null; }
+function ultimoKm(menos){ let k = 0; for (const [id, r] of regs) if (id !== menos){ if (r.km > k) k = r.km; if (r.kmIni > k) k = r.kmIni; } return k; }
+function armarExcluir(btn){ btn.dataset.certo = ''; btn.textContent = 'Excluir'; }
 function erro(el, txt){ el.textContent = txt; el.hidden = false; }
 async function concluir(acao, elErro, msg){
   try { await acao(); fecharFolhas(); toast(msg); }
@@ -494,61 +576,136 @@ async function concluir(acao, elErro, msg){
   }
 }
 
-$('formAbast').addEventListener('input', dicaAbast);
+function abrirMenu(){
+  const ab = parcialAberta();
+  $('opIniciar').hidden = !!ab; $('opEncerrar').hidden = !ab;
+  $('folhaMenu').hidden = false;
+}
+function abrirParcial(modo, id){
+  fecharFolhas();
+  const r = id ? regs.get(id) : null;
+  editando = id || null;
+  modoParcial = r && r.aberta && modo === 'editar' ? 'encerrar' : modo;
+  const m = modoParcial;
+  $('tituloParcial').textContent = {iniciar: 'Iniciar parcial', encerrar: 'Encerrar parcial', completa: 'Parcial já terminada', editar: 'Corrigir parcial'}[m];
+  $('pSalvar').textContent = m === 'iniciar' ? 'Começar' : 'Salvar';
+  $('pFim').hidden = m === 'iniciar';
+  $('pData').value = r ? r.data : hoje();
+  $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? agora() : '');
+  $('pKmIni').value = r ? r.kmIni || '' : (ultimoKm() || '');
+  $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' ? agora() : '');
+  $('pKm').value = r && r.km ? r.km : '';
+  $('pUber').value = r ? paraCampo(r.uber, 2) : '';
+  $('p99').value = r ? paraCampo(r.n99, 2) : '';
+  $('pLanche').value = r ? paraCampo(r.lanche, 2) : '';
+  $('pErro').hidden = true; $('pExcluir').hidden = !r; armarExcluir($('pExcluir'));
+  previaParcial(); $('folhaParcial').hidden = false;
+}
+function lerParcial(){
+  return {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKm($('pKmIni').value), hFim: $('pHFim').value,
+    km: lerKm($('pKm').value), uber: lerValor($('pUber').value), n99: lerValor($('p99').value), lanche: lerValor($('pLanche').value)};
+}
+function previaParcial(){
+  const d = lerParcial(), partes = [];
+  if (modoParcial === 'iniciar'){
+    const k = ultimoKm(editando);
+    if (k) partes.push('Último km lançado: ' + n0(k) + '.');
+    partes.push('Ao parar, toque em Encerrar para lançar o km final e os ganhos.');
+  } else {
+    if (d.kmIni > 0 && d.km > 0) partes.push(d.km >= d.kmIni ? 'Rodou ' + n0(d.km - d.kmIni) + ' km.' : 'O km final está menor que o da saída, confira.');
+    const h = horasDe(d);
+    if (h != null) partes.push('Trabalhou ' + hm(h) + '.');
+    const g = d.uber + d.n99;
+    if (g > 0 && h > 0) partes.push(R$(g / h) + ' de ganho por hora.');
+    if (g > 0 && d.kmIni > 0 && d.km > d.kmIni) partes.push(R$(g / (d.km - d.kmIni)) + ' por km.');
+  }
+  $('pPrev').textContent = partes.join(' '); $('pPrev').hidden = !partes.length;
+}
+$('formParcial').addEventListener('input', previaParcial);
+$('formParcial').addEventListener('submit', e => {
+  e.preventDefault();
+  const d = lerParcial(), el = $('pErro');
+  const antigo = editando ? regs.get(editando) : null;
+  d.criado = antigo && antigo.criado || Date.now();
+  if (!d.data) return erro(el, 'Informe a data.');
+  if (modoParcial === 'iniciar'){
+    if (!d.hIni) return erro(el, 'Informe a hora em que começou.');
+    const novo = {tipo: 'dia', aberta: true, data: d.data, hIni: d.hIni, kmIni: d.kmIni, criado: d.criado};
+    return concluir(() => gravar(editando || novoId('d'), novo), el, 'Parcial iniciada. Boa rodagem!');
+  }
+  if (!(d.uber > 0) && !(d.n99 > 0) && !(d.km > 0)) return erro(el, 'Informe o km final ou o ganho na Uber ou na 99.');
+  if (d.kmIni > 0 && d.km > 0 && d.km < d.kmIni) return erro(el, 'O km ao parar não pode ser menor que o km da saída.');
+  concluir(() => gravar(editando || novoId('d'), d), el, 'Parcial salva');
+});
+
+function abrirAbast(id){
+  fecharFolhas();
+  const r = id ? regs.get(id) : null; editando = id || null;
+  $('tituloAbast').textContent = r ? 'Corrigir abastecimento' : 'Abastecimento';
+  $('aData').value = r ? r.data : hoje();
+  $('aValor').value = r ? paraCampo(r.valor, 2) : '';
+  $('aLitros').value = r ? paraCampo(r.litros, 2) : '';
+  $('aKm').value = r ? r.km : '';
+  $('aErro').hidden = true; $('aExcluir').hidden = !r; armarExcluir($('aExcluir'));
+  previaAbast(); $('folhaAbast').hidden = false;
+}
+function previaAbast(){
+  const v = lerValor($('aValor').value), l = lerValor($('aLitros').value), km = lerKm($('aKm').value), partes = [];
+  if (v > 0 && l > 0) partes.push(R$(v / l) + ' o litro.');
+  if (!editando){
+    let ult = null;                                    // abastecimento anterior
+    for (const r of regs.values()) if (r.tipo === 'abast' && (!ult || r.km > ult.km)) ult = r;
+    if (ult && km > ult.km && ult.litros > 0) partes.push('Fecha o tanque anterior: ' + n0(km - ult.km) + ' km com ' + n1(ult.litros) + ' L, média de ' + n1((km - ult.km) / ult.litros) + ' km/l.');
+    else { const k = ultimoKm(); if (k) partes.push('Último km lançado: ' + n0(k) + '.'); }
+  }
+  $('aPrev').textContent = partes.join(' '); $('aPrev').hidden = !partes.length;
+}
+$('formAbast').addEventListener('input', previaAbast);
 $('formAbast').addEventListener('submit', e => {
   e.preventDefault();
   const d = {tipo: 'abast', data: $('aData').value, valor: lerValor($('aValor').value), litros: lerValor($('aLitros').value), km: lerKm($('aKm').value)};
   if (!d.data) return erro($('aErro'), 'Informe a data.');
   if (!(d.valor > 0) || !(d.litros > 0)) return erro($('aErro'), 'Informe o valor pago e os litros.');
-  if (!(d.km > 0)) return erro($('aErro'), 'Informe o km do painel. É ele que permite calcular a média do carro.');
+  if (!(d.km > 0)) return erro($('aErro'), 'Informe o km do painel. É ele que fecha o tanque e dá a média do carro.');
   const antigo = editando ? regs.get(editando) : null;
   d.criado = antigo && antigo.criado || Date.now();
   concluir(() => gravar(editando || novoId('a'), d), $('aErro'), 'Abastecimento salvo');
 });
-$('formDia').addEventListener('input', dicaDia);
-$('formDia').addEventListener('submit', e => {
-  e.preventDefault();
-  const rod = lerKm($('dRod').value);
-  const d = {tipo: 'dia', data: $('dData').value, uber: lerValor($('dUber').value), n99: lerValor($('d99').value), lanche: lerValor($('dLanche').value), km: lerKm($('dKm').value)};
-  if (!d.data) return erro($('dErro'), 'Informe a data.');
-  if (!(d.uber > 0) && !(d.n99 > 0)) return erro($('dErro'), 'Informe o ganho na Uber, na 99 ou nos dois.');
-  if (!d.km && rod > 0){
-    const base = kmBase();
-    if (!base) return erro($('dErro'), 'Ainda não há km do painel lançado. Informe o km do painel desta vez.');
-    d.km = base + rod;
-  }
-  const antigo = editando ? regs.get(editando) : null;
-  d.criado = antigo && antigo.criado || Date.now();
-  concluir(() => gravar(editando || novoId('d'), d), $('dErro'), 'Parcial salva');
-});
-$('formMedia').addEventListener('submit', e => {
+$('formAjustes').addEventListener('submit', e => {
   e.preventDefault();
   const m = lerValor($('mMedia').value), p = lerValor($('mReserva').value);
   if (!(m > 0)) return erro($('mErro'), 'Informe a média de referência em km por litro.');
   if (p > 100) return erro($('mErro'), 'A reserva vai de 0 a 100%.');
   concluir(() => gravar('config', {tipo: 'config', mediaPadrao: m, reservaPct: p}), $('mErro'), 'Ajustes salvos');
 });
-for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['dExcluir', 'dErro']]){
+for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['pExcluir', 'pErro']]){
   $(btnId).addEventListener('click', ev => {
     const b = ev.currentTarget;
-    if (!b.dataset.certo){ b.dataset.certo = '1'; b.textContent = 'Toque de novo para excluir de vez'; return; }
+    if (!b.dataset.certo){ b.dataset.certo = '1'; b.textContent = 'Excluir mesmo?'; return; }
     const id = editando;
     concluir(() => apagar(id), $(elErro), 'Excluído');
   });
 }
+$('fab').addEventListener('click', abrirMenu);
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-fechar],[data-novo],[data-editar],[data-mes],[data-media]');
-  if (e.target.classList && e.target.classList.contains('folha-fundo')) return fecharFolhas();
+  if (e.target.classList && e.target.classList.contains('fundo')) return fecharFolhas();
+  const t = e.target.closest('[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
   if (!t) return;
   if (t.hasAttribute('data-fechar')) return fecharFolhas();
+  if (t.dataset.tab){ aba = t.dataset.tab; try { localStorage.setItem('rodagem-aba', aba); } catch (er) {} render(); window.scrollTo(0, 0); return; }
   if (t.dataset.novo === 'abast') return abrirAbast();
-  if (t.dataset.novo === 'dia') return abrirDia();
-  if (t.dataset.editar){ const r = regs.get(t.dataset.editar); if (r) (r.tipo === 'abast' ? abrirAbast : abrirDia)(t.dataset.editar); return; }
+  if (t.dataset.novo === 'encerrar'){ const ab = parcialAberta(); return ab ? abrirParcial('encerrar', ab.id) : abrirParcial('completa'); }
+  if (t.dataset.novo) return abrirParcial(t.dataset.novo);
+  if (t.dataset.editar){ const r = regs.get(t.dataset.editar); if (r) r.tipo === 'abast' ? abrirAbast(t.dataset.editar) : abrirParcial('editar', t.dataset.editar); return; }
   if (t.dataset.mes){
     const [a, m] = mesVisto.split('-').map(Number), d = new Date(a, m - 1 + Number(t.dataset.mes), 1);
-    mesVisto = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); render(); return;
+    mesVisto = d.getFullYear() + '-' + p2(d.getMonth() + 1); render(); return;
   }
-  if (t.hasAttribute('data-media')){ $('mMedia').value = paraCampo(config.mediaPadrao, 1); $('mReserva').value = paraCampo(config.reservaPct, 0); $('mErro').hidden = true; $('folhaMedia').hidden = false; }
+  if (t.hasAttribute('data-ajustes')){
+    fecharFolhas();
+    $('mMedia').value = paraCampo(config.mediaPadrao, 1); $('mReserva').value = paraCampo(config.reservaPct, 0);
+    $('mErro').hidden = true; $('folhaAjustes').hidden = false;
+  }
 });
 
 iniciar();
