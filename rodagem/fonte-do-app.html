@@ -141,11 +141,13 @@ details.fechado .dentro button{align-self:flex-start}
       <div class="campo"><label for="dUber">Ganho na Uber (R$)</label><input id="dUber" inputmode="decimal" placeholder="0,00"></div>
       <div class="campo"><label for="d99">Ganho na 99 (R$)</label><input id="d99" inputmode="decimal" placeholder="0,00"></div>
     </div>
+    <div class="campo"><label for="dLanche">Lanche e outros gastos (R$)</label><input id="dLanche" inputmode="decimal" placeholder="0,00"></div>
     <div class="duas">
-      <div class="campo"><label for="dLanche">Lanche e outros gastos (R$)</label><input id="dLanche" inputmode="decimal" placeholder="0,00"></div>
       <div class="campo"><label for="dKm">Km do painel ao parar</label><input id="dKm" inputmode="numeric" placeholder="ex.: 85510"></div>
+      <div class="campo"><label for="dRod">ou km rodados na saída</label><input id="dRod" inputmode="numeric" placeholder="ex.: 190"></div>
     </div>
-    <p class="dica">Com o km do painel o app calcula quanto de gasolina essa saída gastou. Sem ele, a parcial entra só com o ganho e o lanche.</p>
+    <p class="dica" id="dDica"></p>
+    <p class="dica">Preencha um dos dois: o km do painel ou quanto rodou. Com isso o app mostra os km e a gasolina de cada saída. Sem nenhum, a parcial entra só com o ganho e o lanche.</p>
     <p class="erro" id="dErro" hidden></p>
     <div class="folha-acoes">
       <button type="button" class="btn" data-fechar>Cancelar</button>
@@ -209,7 +211,7 @@ function calcular(regs, mediaPadrao, reservaPct){
     let ultimo = t.abast.km;
     for (const d of t.dias){
       d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0;
-      if (d.km > 0 && d.km >= ultimo){ d.rodou = d.km - ultimo; ultimo = d.km; } else d.rodou = null;
+      if (d.km > 0 && d.km >= ultimo){ d.rodou = d.km - ultimo; ultimo = d.km; d.acum = ultimo - t.abast.km; } else d.rodou = null;
     }
     t.uber = t.dias.reduce((s, d) => s + (d.uber || 0), 0);
     t.n99 = t.dias.reduce((s, d) => s + (d.n99 || 0), 0);
@@ -341,7 +343,7 @@ function listaDias(dias, noTanque){
     if (d.n99) partes.push('<span class="chip n">99</span>' + R$(d.n99));
     if (d.lanche) partes.push('lanche/gastos ' + R$(d.lanche));
     let det = partes.join(' &nbsp; ');
-    if (d.rodou != null) det += (det ? '<br>' : '') + n0(d.rodou) + ' km rodados · gasolina ' + R$(d.custo) + (d.rodou > 0 ? ' · ' + R$(d.ganho / d.rodou) + ' por km' : '');
+    if (d.rodou != null) det += (det ? '<br>' : '') + '<b>' + n0(d.rodou) + ' km nesta saída</b> · ' + n0(d.acum) + ' km no tanque<br>gasolina ' + R$(d.custo) + (d.rodou > 0 ? ' · ' + R$(d.ganho / d.rodou) + ' por km' : '');
     else if (noTanque) det += (det ? '<br>' : '') + (d.km > 0 ? 'Km do painel menor que o anterior, confira' : 'Sem km do painel');
     const v = d.lucro != null ? d.lucro : d.ganho - d.lanche;
     return '<button class="item" data-editar="' + esc(d.id) + '"><span class="t">' + dataBR(d.data, true) + '</span>' +
@@ -468,9 +470,21 @@ function abrirDia(id){
   $('dUber').value = r ? paraCampo(r.uber, 2) : '';
   $('d99').value = r ? paraCampo(r.n99, 2) : '';
   $('dLanche').value = r ? paraCampo(r.lanche, 2) : '';
-  $('dKm').value = r && r.km ? r.km : '';
+  $('dKm').value = r && r.km ? r.km : ''; $('dRod').value = ''; dicaDia();
   $('dErro').hidden = true; $('dExcluir').hidden = !r; armarExcluir($('dExcluir'), 'Excluir esta parcial');
   $('folhaDia').hidden = false;
+}
+function kmBase(){   // último km lançado antes desta parcial
+  const data = $('dData').value || hoje(); let k = 0;
+  for (const [id, r] of regs) if (id !== editando && r.km > k && r.data <= data) k = r.km;
+  return k;
+}
+function dicaDia(){
+  const base = kmBase(), km = lerKm($('dKm').value), rod = lerKm($('dRod').value);
+  let t = base ? 'Último km lançado: ' + n0(base) + '. ' : '';
+  if (km > 0 && base) t += km >= base ? 'Rodou ' + n0(km - base) + ' km nesta saída.' : 'Esse km é menor que o último lançado, confira.';
+  else if (rod > 0 && base) t += 'O painel deve estar em ' + n0(base + rod) + ' km.';
+  $('dDica').textContent = t;
 }
 function erro(el, txt){ el.textContent = txt; el.hidden = false; }
 async function concluir(acao, elErro, msg){
@@ -491,11 +505,18 @@ $('formAbast').addEventListener('submit', e => {
   d.criado = antigo && antigo.criado || Date.now();
   concluir(() => gravar(editando || novoId('a'), d), $('aErro'), 'Abastecimento salvo');
 });
+$('formDia').addEventListener('input', dicaDia);
 $('formDia').addEventListener('submit', e => {
   e.preventDefault();
+  const rod = lerKm($('dRod').value);
   const d = {tipo: 'dia', data: $('dData').value, uber: lerValor($('dUber').value), n99: lerValor($('d99').value), lanche: lerValor($('dLanche').value), km: lerKm($('dKm').value)};
   if (!d.data) return erro($('dErro'), 'Informe a data.');
   if (!(d.uber > 0) && !(d.n99 > 0)) return erro($('dErro'), 'Informe o ganho na Uber, na 99 ou nos dois.');
+  if (!d.km && rod > 0){
+    const base = kmBase();
+    if (!base) return erro($('dErro'), 'Ainda não há km do painel lançado. Informe o km do painel desta vez.');
+    d.km = base + rod;
+  }
   const antigo = editando ? regs.get(editando) : null;
   d.criado = antigo && antigo.criado || Date.now();
   concluir(() => gravar(editando || novoId('d'), d), $('dErro'), 'Parcial salva');
