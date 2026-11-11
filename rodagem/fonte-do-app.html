@@ -158,8 +158,8 @@ label.f .marca{margin-right:4px}
 
 <div class="fundo" id="folhaMenu" hidden><div class="folha menu">
   <h3>O que você quer lançar?</h3>
-  <button class="op" data-novo="iniciar" id="opIniciar"><span>▶️</span><div>Iniciar parcial<small>Vou sair para rodar agora: marca a hora e o km</small></div></button>
-  <button class="op" data-novo="encerrar" id="opEncerrar"><span>⏹️</span><div>Encerrar parcial<small>Parei de rodar: hora, km final e ganhos</small></div></button>
+  <button class="op" data-novo="iniciar" id="opIniciar"><span>▶️</span><div>Iniciar parcial<small>Vou sair para rodar agora: marca a hora e o hodômetro</small></div></button>
+  <button class="op" data-novo="encerrar" id="opEncerrar"><span>⏹️</span><div>Encerrar parcial<small>Parei de rodar: hora, hodômetro e ganhos</small></div></button>
   <button class="op" data-novo="completa"><span>📝</span><div>Parcial já terminada<small>Lançar de uma vez uma saída que já acabou</small></div></button>
   <button class="op" data-novo="abast"><span>⛽</span><div>Abastecimento<small>Fecha o tanque anterior e calcula a média</small></div></button>
   <button class="btn ghost full" data-fechar>Cancelar</button>
@@ -171,12 +171,12 @@ label.f .marca{margin-right:4px}
     <label class="f">Data<input id="pData" type="date" required></label>
     <div class="grid2">
       <label class="f">Começou às<input id="pHIni" type="time"></label>
-      <label class="f">Km do painel na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 85430"></label>
+      <label class="f">Hodômetro parcial na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 0"></label>
     </div>
     <div id="pFim">
       <div class="grid2">
         <label class="f">Terminou às<input id="pHFim" type="time"></label>
-        <label class="f">Km do painel ao parar<input id="pKm" inputmode="numeric" placeholder="ex.: 85610"></label>
+        <label class="f">Hodômetro parcial ao parar<input id="pKm" inputmode="numeric" placeholder="ex.: 100"></label>
       </div>
       <div class="grid2">
         <label class="f"><span class="marca u">Uber</span>Ganho (R$)<input id="pUber" inputmode="decimal" placeholder="0,00"></label>
@@ -202,7 +202,9 @@ label.f .marca{margin-right:4px}
       <label class="f">Valor pago (R$)<input id="aValor" inputmode="decimal" placeholder="0,00"></label>
       <label class="f">Litros<input id="aLitros" inputmode="decimal" placeholder="0,0"></label>
     </div>
-    <label class="f">Km do painel na hora de abastecer<input id="aKm" inputmode="numeric" placeholder="ex.: 85320"></label>
+    <label class="f">Hora<input id="aHora" type="time"></label>
+    <label class="f">Hodômetro parcial antes de zerar (km)<input id="aKm" inputmode="numeric" placeholder="ex.: 380"></label>
+    <p class="s" style="margin:-6px 0 12px">Quanto o carro rodou com o tanque anterior. Depois de salvar, zere o hodômetro parcial. No primeiro abastecimento pode deixar em branco.</p>
     <div class="preview" id="aPrev" hidden></div>
     <p class="erro" id="aErro" hidden></p>
     <div class="actions">
@@ -241,17 +243,9 @@ function horasDe(d){
 function calcular(regs, mediaPadrao, reservaPct){
   const abs = regs.filter(r => r.tipo === 'abast');
   const dias = regs.filter(r => r.tipo === 'dia' && !r.aberta);
-  const ordem = (a, b) => {
-    if (a.data !== b.data) return a.data < b.data ? -1 : 1;
-    if (a.tipo !== b.tipo){
-      const ab = a.tipo === 'abast' ? a : b, di = a.tipo === 'dia' ? a : b;
-      const abPrimeiro = !(di.km > 0) || di.km > ab.km;   // parcial sem km, ou que terminou depois do posto
-      return (a === ab) === abPrimeiro ? -1 : 1;
-    }
-    if (a.km > 0 && b.km > 0 && a.km !== b.km) return a.km - b.km;
-    if (a.hIni && b.hIni && a.hIni !== b.hIni) return a.hIni < b.hIni ? -1 : 1;
-    return (a.criado || 0) - (b.criado || 0);
-  };
+  // Tudo é ordenado por data e hora: o abastecimento separa um tanque do outro.
+  const quando = r => r.data + ' ' + (r.tipo === 'abast' ? (r.hora || '00:00') : (r.hIni || r.hFim || '12:00'));
+  const ordem = (a, b) => quando(a) < quando(b) ? -1 : quando(a) > quando(b) ? 1 : (a.criado || 0) - (b.criado || 0);
   const seq = [...abs, ...dias].sort(ordem);
   const tanques = [], soltos = [];
   let atual = null;
@@ -259,13 +253,23 @@ function calcular(regs, mediaPadrao, reservaPct){
     if (r.tipo === 'abast'){ atual = {abast: r, dias: [], fechado: false}; tanques.push(atual); }
     else (atual ? atual.dias : soltos).push({...r});
   }
+  // Hodômetro parcial: zera a cada abastecimento, então cada parcial é lida a partir do zero do tanque.
+  for (const t of tanques){
+    let ultimo = 0;
+    for (const d of t.dias){
+      const ini = d.kmIni != null && d.kmIni !== '' ? Number(d.kmIni) : ultimo;
+      if (d.km > 0 && d.km >= ini){ d.rodou = d.km - ini; if (d.km > ultimo) ultimo = d.km; d.acum = ultimo; } else d.rodou = null;
+    }
+    t.kmLeitura = ultimo;
+  }
   let kmTot = 0, lTot = 0;
   tanques.forEach((t, i) => {
     const prox = tanques[i + 1];
     t.preco = t.abast.litros > 0 ? t.abast.valor / t.abast.litros : 0;
     if (prox){
       t.fechado = true; t.fim = prox.abast;
-      t.km = prox.abast.km - t.abast.km;
+      t.kmDoPosto = prox.abast.kmAnterior > 0;          // leitura do hodômetro na hora de zerar
+      t.km = t.kmDoPosto ? prox.abast.kmAnterior : t.kmLeitura;
       if (t.km > 0 && t.abast.litros > 0){ t.media = t.km / t.abast.litros; kmTot += t.km; lTot += t.abast.litros; }
     }
   });
@@ -274,19 +278,14 @@ function calcular(regs, mediaPadrao, reservaPct){
   const base = d => { d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0; d.horas = horasDe(d); };
   const soma = (l, f) => l.reduce((s, d) => s + (f(d) || 0), 0);
   for (const t of tanques){
-    let ultimo = t.abast.km;
-    for (const d of t.dias){
-      base(d);
-      const ini = d.kmIni > 0 ? d.kmIni : ultimo;
-      if (d.km > 0 && d.km >= ini){ d.rodou = d.km - ini; if (d.km > ultimo) ultimo = d.km; d.acum = ultimo - t.abast.km; } else d.rodou = null;
-    }
+    for (const d of t.dias) base(d);
     t.uber = soma(t.dias, d => d.uber); t.n99 = soma(t.dias, d => d.n99); t.ganho = t.uber + t.n99;
     t.lanche = soma(t.dias, d => d.lanche); t.horas = soma(t.dias, d => d.horas); t.kmParc = soma(t.dias, d => d.rodou);
     if (t.fechado){
       t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
       t.gasto = t.abast.valor;
     } else {
-      t.km = ultimo - t.abast.km;
+      t.km = t.kmLeitura;
       t.custoKm = t.preco / mediaRef;
       t.gasto = Math.min(t.abast.valor, t.km * t.custoKm);
       t.restoL = Math.max(0, t.abast.litros - t.km / mediaRef);
@@ -305,7 +304,7 @@ function calcular(regs, mediaPadrao, reservaPct){
   }
   for (const d of soltos){
     base(d);
-    d.rodou = d.kmIni > 0 && d.km >= d.kmIni ? d.km - d.kmIni : null; d.custo = null; d.lucro = null;
+    d.rodou = d.kmIni != null && d.km > 0 && d.km >= d.kmIni ? d.km - d.kmIni : null; d.custo = null; d.lucro = null;
   }
   return {tanques, soltos, mediaGeral, mediaRef};
 }
@@ -428,7 +427,7 @@ function listaParciais(dias){
     if (d.n99) ganhos.push(N + R$(d.n99));
     const info = [];
     if (d.rodou != null) info.push('<b>' + n0(d.rodou) + ' km</b>' + (d.acum != null ? ' (' + n0(d.acum) + ' no tanque)' : ''));
-    else info.push(d.km > 0 ? 'km do painel fora de ordem, confira' : 'sem km');
+    else info.push(d.km > 0 ? 'km final menor que o da saída, confira' : 'sem km');
     if (d.horas != null) info.push(hm(d.horas));
     const gastos = [];
     if (d.custo != null) gastos.push('gasolina ' + R$(d.custo));
@@ -449,10 +448,10 @@ function telaResumo(c, pct){
   let h = '';
   if (!atual){
     h += '<div class="card hero"><div class="hero-in"><div class="lbl"><span>Como funciona</span></div>' +
-      '<ol><li>Abasteceu? Toque no + e lance o valor, os litros e o km do painel.</li>' +
-      '<li>Ao sair para rodar, inicie uma parcial: o app marca a hora e o km.</li>' +
+      '<ol><li>Abasteceu? Toque no + e lance o valor e os litros. Depois zere o hodômetro parcial do carro.</li>' +
+      '<li>Ao sair para rodar, inicie uma parcial: o app marca a hora e o km do hodômetro (começa em 0).</li>' +
       '<li>Ao parar, encerre a parcial com o km final e o que fez na Uber e na 99.</li>' +
-      '<li>No próximo abastecimento o tanque fecha com a média km/l e o lucro.</li></ol></div></div>';
+      '<li>No próximo abastecimento, lance o km do hodômetro antes de zerar: o tanque fecha com a média km/l e o lucro.</li></ol></div></div>';
   } else {
     const a = atual.abast, cheio = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
     h += '<div class="card hero"><div class="hero-in">' +
@@ -475,7 +474,7 @@ function telaResumo(c, pct){
   if (ab){
     const ha = haQuanto(ab);
     h += '<div class="card andamento"><span class="ico">▶️</span><span class="mid"><span class="t">Parcial em andamento</span>' +
-      '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni ? ' · saiu com ' + n0(ab.kmIni) + ' km' : '') + '</span></span>' +
+      '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni != null ? ' · hodômetro em ' + n0(ab.kmIni) + ' km' : '') + '</span></span>' +
       '<button class="btn" data-novo="encerrar">Encerrar</button></div>';
   } else if (atual){
     h += '<button class="btn full" data-novo="iniciar" style="margin-bottom:12px">▶ Iniciar parcial</button>';
@@ -492,9 +491,9 @@ function telaTanques(c, pct){
     const a = t.abast, fora = t.km - t.kmParc;
     h += '<div class="card"><div class="tanque-top"><span><span class="t">' + dataBR(a.data) + (t.fechado ? ' a ' + dataBR(t.fim.data) : '') + '</span> ' +
       (t.fechado ? '' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</b></div>';
-    if (t.fechado && t.media == null) h += '<p class="erro">O km do painel dos abastecimentos está fora de ordem. Confira os valores.</p>';
-    h += linha('🛣️ Km rodados no tanque', n0(t.km) + ' km', '', n0(t.kmParc) + ' km em corridas' + (fora > 0 ? ' · ' + n0(fora) + ' km fora das parciais' : '')) +
-      linha('⛽ Abastecimento', R$(a.valor), '', n1(a.litros) + ' L a ' + R$(t.preco) + ' · painel em ' + n0(a.km) + ' km') +
+    if (t.fechado && t.media == null) h += '<p class="erro">Falta o km deste tanque. Corrija o abastecimento seguinte e informe o hodômetro antes de zerar.</p>';
+    h += linha('🛣️ Km rodados no tanque', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar · ' : 'pela última parcial · ') : 'hodômetro agora · ') + n0(t.kmParc) + ' km nas parciais' + (fora > 0 ? ', ' + n0(fora) + ' fora delas' : '')) +
+      linha('⛽ Abastecimento', R$(a.valor), '', n1(a.litros) + ' L a ' + R$(t.preco) + (a.hora ? ' · às ' + esc(a.hora) : '')) +
       (t.fechado ? linha('Média do tanque', t.media != null ? n1(t.media) + ' km/l' : '–', '', t.custoKm != null ? R$(t.custoKm) + ' de gasolina por km' : '') :
         linha('Média do tanque', 'ao abastecer', '', 'Sai quando você lançar o próximo abastecimento')) +
       linha('⏱️ Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.porHora != null ? R$(t.porHora) + ' de lucro por hora' : '') +
@@ -560,7 +559,7 @@ function telaHistorico(c, lista, pct){
     });
     for (const a of ab){
       tot.comb += a.valor;
-      h += '<tr class="abast" data-editar="' + esc(a.id) + '"><td>&nbsp;&nbsp;⛽ abasteceu</td><td>' + n0(a.km) + '</td><td colspan="4">' + n1(a.litros) + ' L a ' + R$(a.valor / a.litros) + '</td><td>' + R$(a.valor) + '</td><td></td><td></td></tr>';
+      h += '<tr class="abast" data-editar="' + esc(a.id) + '"><td>&nbsp;&nbsp;⛽ abasteceu</td><td>' + (a.kmAnterior > 0 ? n0(a.kmAnterior) : '') + '</td><td colspan="4">' + n1(a.litros) + ' L a ' + R$(a.valor / a.litros) + '</td><td>' + R$(a.valor) + '</td><td></td><td></td></tr>';
     }
   }
   h += '<tr class="total"><td>Total do mês</td><td>' + n0(tot.km) + '</td><td>' + (tot.horas ? hm(tot.horas) : '–') + '</td><td>' + R$(tot.uber) + '</td><td>' + R$(tot.n99) + '</td><td>' + R$(tot.lanche) + '</td><td>' + R$(tot.gas) + '</td><td class="' + cor(tot.lucro) + '">' + R$(tot.lucro) + '</td><td>' + (tot.horas > 0 ? R$(tot.lucro / tot.horas) : '–') + '</td></tr>';
@@ -610,7 +609,14 @@ setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.
 
 // ---------- folhas de lançamento ----------
 function fecharFolhas(){ for (const id of ['folhaMenu', 'folhaParcial', 'folhaAbast', 'folhaAjustes']) $(id).hidden = true; editando = null; }
-function ultimoKm(menos){ let k = 0; for (const [id, r] of regs) if (id !== menos){ if (r.km > k) k = r.km; if (r.kmIni > k) k = r.kmIni; } return k; }
+function kmAtual(menos){   // leitura do hodômetro parcial no tanque em uso (0 logo depois de abastecer)
+  const lista = [...regs.entries()].filter(([id]) => id !== menos).map(([id, r]) => ({...r, id}));
+  const c = calcular(lista, config.mediaPadrao, 0);
+  const t = c.tanques[c.tanques.length - 1];
+  if (t) return t.kmLeitura;
+  let k = 0; for (const d of c.soltos) if (d.km > k) k = d.km; return k;
+}
+const lerKmOpc = txt => /\d/.test(String(txt || '')) ? lerKm(txt) : null;
 function armarExcluir(btn){ btn.dataset.certo = ''; btn.textContent = 'Excluir'; }
 function erro(el, txt){ el.textContent = txt; el.hidden = false; }
 async function concluir(acao, elErro, msg){
@@ -636,7 +642,7 @@ function abrirParcial(modo, id){
   $('pFim').hidden = m === 'iniciar';
   $('pData').value = r ? r.data : hoje();
   $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? agora() : '');
-  $('pKmIni').value = r ? r.kmIni || '' : (ultimoKm() || '');
+  $('pKmIni').value = r ? (r.kmIni != null ? r.kmIni : '') : kmAtual();
   $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' ? agora() : '');
   $('pKm').value = r && r.km ? r.km : '';
   $('pUber').value = r ? paraCampo(r.uber, 2) : '';
@@ -646,22 +652,21 @@ function abrirParcial(modo, id){
   previaParcial(); $('folhaParcial').hidden = false;
 }
 function lerParcial(){
-  return {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKm($('pKmIni').value), hFim: $('pHFim').value,
+  return {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKmOpc($('pKmIni').value), hFim: $('pHFim').value,
     km: lerKm($('pKm').value), uber: lerValor($('pUber').value), n99: lerValor($('p99').value), lanche: lerValor($('pLanche').value)};
 }
 function previaParcial(){
   const d = lerParcial(), partes = [];
   if (modoParcial === 'iniciar'){
-    const k = ultimoKm(editando);
-    if (k) partes.push('Último km lançado: ' + n0(k) + '.');
+    partes.push('Hodômetro parcial agora: ' + n0(kmAtual(editando)) + ' km (zera a cada abastecimento).');
     partes.push('Ao parar, toque em Encerrar para lançar o km final e os ganhos.');
   } else {
-    if (d.kmIni > 0 && d.km > 0) partes.push(d.km >= d.kmIni ? 'Rodou ' + n0(d.km - d.kmIni) + ' km.' : 'O km final está menor que o da saída, confira.');
+    if (d.kmIni != null && d.km > 0) partes.push(d.km >= d.kmIni ? 'Rodou ' + n0(d.km - d.kmIni) + ' km.' : 'O km final está menor que o da saída, confira.');
     const h = horasDe(d);
-    if (h != null) partes.push('Trabalhou ' + hm(h) + '.');
+    if (h > 0) partes.push('Trabalhou ' + hm(h) + '.');
     const g = d.uber + d.n99;
     if (g > 0 && h > 0) partes.push(R$(g / h) + ' de ganho por hora.');
-    if (g > 0 && d.kmIni > 0 && d.km > d.kmIni) partes.push(R$(g / (d.km - d.kmIni)) + ' por km.');
+    if (g > 0 && d.kmIni != null && d.km > d.kmIni) partes.push(R$(g / (d.km - d.kmIni)) + ' por km.');
   }
   $('pPrev').textContent = partes.join(' '); $('pPrev').hidden = !partes.length;
 }
@@ -678,7 +683,7 @@ $('formParcial').addEventListener('submit', e => {
     return concluir(() => gravar(editando || novoId('d'), novo), el, 'Parcial iniciada. Boa rodagem!');
   }
   if (!(d.uber > 0) && !(d.n99 > 0) && !(d.km > 0)) return erro(el, 'Informe o km final ou o ganho na Uber ou na 99.');
-  if (d.kmIni > 0 && d.km > 0 && d.km < d.kmIni) return erro(el, 'O km ao parar não pode ser menor que o km da saída.');
+  if (d.kmIni != null && d.km > 0 && d.km < d.kmIni) return erro(el, 'O hodômetro ao parar não pode ser menor que o da saída. Se abasteceu no meio, lance o abastecimento antes.');
   concluir(() => gravar(editando || novoId('d'), d), el, 'Parcial salva');
 });
 
@@ -689,31 +694,30 @@ function abrirAbast(id){
   $('aData').value = r ? r.data : hoje();
   $('aValor').value = r ? paraCampo(r.valor, 2) : '';
   $('aLitros').value = r ? paraCampo(r.litros, 2) : '';
-  $('aKm').value = r ? r.km : '';
+  $('aHora').value = r ? r.hora || '' : agora();
+  $('aKm').value = r ? (r.kmAnterior || '') : (kmAtual() || '');
   $('aErro').hidden = true; $('aExcluir').hidden = !r; armarExcluir($('aExcluir'));
   previaAbast(); $('folhaAbast').hidden = false;
 }
 function previaAbast(){
   const v = lerValor($('aValor').value), l = lerValor($('aLitros').value), km = lerKm($('aKm').value), partes = [];
   if (v > 0 && l > 0) partes.push(R$(v / l) + ' o litro.');
-  if (!editando){
-    let ult = null;                                    // abastecimento anterior
-    for (const r of regs.values()) if (r.tipo === 'abast' && (!ult || r.km > ult.km)) ult = r;
-    if (ult && km > ult.km && ult.litros > 0) partes.push('Fecha o tanque anterior: ' + n0(km - ult.km) + ' km com ' + n1(ult.litros) + ' L, média de ' + n1((km - ult.km) / ult.litros) + ' km/l.');
-    else { const k = ultimoKm(); if (k) partes.push('Último km lançado: ' + n0(k) + '.'); }
+  if (km > 0){
+    const outros = [...regs.entries()].filter(([id]) => id !== editando).map(([id, r]) => ({...r, id}));
+    const c = calcular(outros, config.mediaPadrao, 0), ant = c.tanques[c.tanques.length - 1];
+    if (ant && ant.abast.litros > 0) partes.push('Fecha o tanque anterior: ' + n0(km) + ' km com ' + n1(ant.abast.litros) + ' L, média de ' + n1(km / ant.abast.litros) + ' km/l.');
   }
   $('aPrev').textContent = partes.join(' '); $('aPrev').hidden = !partes.length;
 }
 $('formAbast').addEventListener('input', previaAbast);
 $('formAbast').addEventListener('submit', e => {
   e.preventDefault();
-  const d = {tipo: 'abast', data: $('aData').value, valor: lerValor($('aValor').value), litros: lerValor($('aLitros').value), km: lerKm($('aKm').value)};
+  const d = {tipo: 'abast', data: $('aData').value, hora: $('aHora').value, valor: lerValor($('aValor').value), litros: lerValor($('aLitros').value), kmAnterior: lerKm($('aKm').value)};
   if (!d.data) return erro($('aErro'), 'Informe a data.');
   if (!(d.valor > 0) || !(d.litros > 0)) return erro($('aErro'), 'Informe o valor pago e os litros.');
-  if (!(d.km > 0)) return erro($('aErro'), 'Informe o km do painel. É ele que fecha o tanque e dá a média do carro.');
   const antigo = editando ? regs.get(editando) : null;
   d.criado = antigo && antigo.criado || Date.now();
-  concluir(() => gravar(editando || novoId('a'), d), $('aErro'), 'Abastecimento salvo');
+  concluir(() => gravar(editando || novoId('a'), d), $('aErro'), 'Abastecimento salvo. Agora zere o hodômetro parcial.');
 });
 $('formAjustes').addEventListener('submit', e => {
   e.preventDefault();
