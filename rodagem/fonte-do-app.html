@@ -388,6 +388,14 @@ function aviso(txt){ const a = $('aviso'); a.hidden = !txt; a.textContent = txt 
 let toastT;
 function toast(txt){ const t = $('toast'); t.textContent = txt; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
 
+async function agendaDoArquivo(){   // cópia da agenda publicada junto com o app, para quem abre sem conta
+  try {
+    const r = await fetch('agenda.json', {cache: 'no-store'});
+    if (!r.ok) return;
+    const a = await r.json();
+    if (!agenda && a && Array.isArray(a.itens)){ agenda = a; if (aba === 'eventos') render(); }
+  } catch (e) {}
+}
 function modoLocal(motivo){
   col = null;
   try {
@@ -408,7 +416,8 @@ async function iniciar(){
     }
   } catch (e) {}
   if (!db || !uid){
-    modoLocal('Não foi possível ligar à sua conta Claude agora. O que você lançar fica guardado só neste aparelho.');
+    agendaDoArquivo();
+    modoLocal('Você está usando o app sem conta Claude: seus lançamentos ficam guardados só neste celular. Não limpe os dados do navegador para não perder.');
     return;
   }
   try {
@@ -634,7 +643,7 @@ function telaBares(){
   return h;
 }
 function telaEventos(){
-  if (!agenda) return '<div class="card"><p class="empty">' + (col ? 'Carregando a agenda…' : 'A agenda de eventos aparece quando o app está ligado à sua conta Claude.') + '</p></div>';
+  if (!agenda) return '<div class="card"><p class="empty">' + 'Carregando a agenda…' + '</p></div>';
   const hj = hoje(), am = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })();
   const itens = (Array.isArray(agenda.itens) ? agenda.itens : []).filter(e => e && e.data && (e.ate || e.data) >= hj);
   let h = '<p class="s" style="margin:4px 0 12px">Agenda de Brasília e região' + (agenda.atualizado ? ', atualizada em ' + dataBR(String(agenda.atualizado)) : '') + '. Datas e horários vêm de sites de agenda e ingressos: confirme antes de contar com o movimento.</p>';
