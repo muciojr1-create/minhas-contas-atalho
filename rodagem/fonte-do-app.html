@@ -135,28 +135,33 @@ details.fechado .dentro button{align-self:flex-start}
 
 <div class="folha-fundo" id="folhaDia" hidden>
   <form class="folha" id="formDia" autocomplete="off">
-    <h2 id="tituloDia">Lançar dia</h2>
+    <h2 id="tituloDia">Lançar parcial</h2>
     <div class="campo"><label for="dData">Data</label><input id="dData" type="date" required></div>
     <div class="duas">
       <div class="campo"><label for="dUber">Ganho na Uber (R$)</label><input id="dUber" inputmode="decimal" placeholder="0,00"></div>
       <div class="campo"><label for="d99">Ganho na 99 (R$)</label><input id="d99" inputmode="decimal" placeholder="0,00"></div>
     </div>
-    <div class="campo"><label for="dKm">Km do painel ao encerrar o dia</label><input id="dKm" inputmode="numeric" placeholder="ex.: 85510"></div>
-    <p class="dica">Com o km do painel o app calcula quanto de gasolina o dia gastou. Sem ele, o dia entra só com o ganho.</p>
+    <div class="duas">
+      <div class="campo"><label for="dLanche">Lanche e outros gastos (R$)</label><input id="dLanche" inputmode="decimal" placeholder="0,00"></div>
+      <div class="campo"><label for="dKm">Km do painel ao parar</label><input id="dKm" inputmode="numeric" placeholder="ex.: 85510"></div>
+    </div>
+    <p class="dica">Com o km do painel o app calcula quanto de gasolina essa saída gastou. Sem ele, a parcial entra só com o ganho e o lanche.</p>
     <p class="erro" id="dErro" hidden></p>
     <div class="folha-acoes">
       <button type="button" class="btn" data-fechar>Cancelar</button>
       <button type="submit" class="btn pri">Salvar</button>
     </div>
-    <button type="button" class="btn danger" id="dExcluir" hidden>Excluir este dia</button>
+    <button type="button" class="btn danger" id="dExcluir" hidden>Excluir esta parcial</button>
   </form>
 </div>
 
 <div class="folha-fundo" id="folhaMedia" hidden>
   <form class="folha" id="formMedia" autocomplete="off">
-    <h2>Média de referência</h2>
+    <h2>Ajustes</h2>
     <p class="dica">Usada para estimar o gasto de gasolina enquanto nenhum tanque foi fechado. Depois do segundo abastecimento o app passa a usar a média real do seu carro.</p>
-    <div class="campo"><label for="mMedia">Km por litro</label><input id="mMedia" inputmode="decimal" placeholder="10"></div>
+    <div class="campo"><label for="mMedia">Média de referência (km por litro)</label><input id="mMedia" inputmode="decimal" placeholder="10"></div>
+    <div class="campo"><label for="mReserva">Reserva de manutenção (% do lucro)</label><input id="mReserva" inputmode="decimal" placeholder="0"></div>
+    <p class="dica">A reserva separa uma parte do lucro de cada tanque e do mês para manutenção do carro. Deixe 0 para não separar nada.</p>
     <p class="erro" id="mErro" hidden></p>
     <div class="folha-acoes">
       <button type="button" class="btn" data-fechar>Cancelar</button>
@@ -168,7 +173,7 @@ details.fechado .dentro button{align-self:flex-start}
 
 <script>
 // ---------- contas (função pura) ----------
-function calcular(regs, mediaPadrao){
+function calcular(regs, mediaPadrao, reservaPct){
   const abs = regs.filter(r => r.tipo === 'abast');
   const dias = regs.filter(r => r.tipo === 'dia');
   const ordem = (a, b) => {
@@ -203,12 +208,13 @@ function calcular(regs, mediaPadrao){
   for (const t of tanques){
     let ultimo = t.abast.km;
     for (const d of t.dias){
-      d.ganho = (d.uber || 0) + (d.n99 || 0);
+      d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0;
       if (d.km > 0 && d.km >= ultimo){ d.rodou = d.km - ultimo; ultimo = d.km; } else d.rodou = null;
     }
     t.uber = t.dias.reduce((s, d) => s + (d.uber || 0), 0);
     t.n99 = t.dias.reduce((s, d) => s + (d.n99 || 0), 0);
     t.ganho = t.uber + t.n99;
+    t.lanche = t.dias.reduce((s, d) => s + d.lanche, 0);
     if (t.fechado){
       t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
       t.gasto = t.abast.valor;
@@ -219,13 +225,15 @@ function calcular(regs, mediaPadrao){
       t.restoL = Math.max(0, t.abast.litros - t.km / mediaRef);
       t.restoKm = t.restoL * mediaRef;
     }
-    t.lucro = t.ganho - t.gasto;
+    t.lucro = t.ganho - t.gasto - t.lanche;
+    t.reserva = t.lucro > 0 ? t.lucro * (reservaPct || 0) / 100 : 0;
+    t.livre = t.lucro - t.reserva;
     for (const d of t.dias){
       d.custo = d.rodou != null && t.custoKm != null ? d.rodou * t.custoKm : null;
-      d.lucro = d.custo != null ? d.ganho - d.custo : null;
+      d.lucro = d.custo != null ? d.ganho - d.custo - d.lanche : null;
     }
   }
-  for (const d of soltos){ d.ganho = (d.uber || 0) + (d.n99 || 0); d.rodou = null; d.custo = null; d.lucro = null; }
+  for (const d of soltos){ d.ganho = (d.uber || 0) + (d.n99 || 0); d.lanche = d.lanche || 0; d.rodou = null; d.custo = null; d.lucro = null; }
   return {tanques, soltos, mediaGeral, mediaRef};
 }
 
@@ -255,7 +263,7 @@ const paraCampo = (v, casas) => v ? v.toLocaleString('pt-BR', {minimumFractionDi
 const $ = id => document.getElementById(id);
 const LOCAL = 'rodagem-v1';
 let regs = new Map();           // id -> registro
-let config = {mediaPadrao: 10};
+let config = {mediaPadrao: 10, reservaPct: 0};
 let col = null;                 // coleção no banco (null = guardando só neste aparelho)
 let pronto = false;
 let mesVisto = hoje().slice(0, 7);
@@ -311,7 +319,7 @@ async function iniciar(){
     for (const d of snap.docs){
       const v = d.data();
       if (!v) continue;
-      if (d.id === 'config') config = {mediaPadrao: Number(v.mediaPadrao) || 10};
+      if (d.id === 'config') config = {mediaPadrao: Number(v.mediaPadrao) || 10, reservaPct: Number(v.reservaPct) || 0};
       else if (v.tipo === 'abast' || v.tipo === 'dia') m.set(d.id, v);
     }
     regs = m; pronto = true;
@@ -326,15 +334,16 @@ async function iniciar(){
 
 // ---------- tela ----------
 function listaDias(dias, noTanque){
-  if (!dias.length) return '<p class="vazio">Nenhum dia lançado ainda neste tanque.</p>';
+  if (!dias.length) return '<p class="vazio">Nenhuma parcial lançada ainda neste tanque.</p>';
   return [...dias].reverse().map(d => {
     const partes = [];
     if (d.uber) partes.push('<span class="chip u">Uber</span>' + R$(d.uber));
     if (d.n99) partes.push('<span class="chip n">99</span>' + R$(d.n99));
+    if (d.lanche) partes.push('lanche/gastos ' + R$(d.lanche));
     let det = partes.join(' &nbsp; ');
     if (d.rodou != null) det += (det ? '<br>' : '') + n0(d.rodou) + ' km rodados · gasolina ' + R$(d.custo) + (d.rodou > 0 ? ' · ' + R$(d.ganho / d.rodou) + ' por km' : '');
     else if (noTanque) det += (det ? '<br>' : '') + (d.km > 0 ? 'Km do painel menor que o anterior, confira' : 'Sem km do painel');
-    const v = d.lucro != null ? d.lucro : d.ganho;
+    const v = d.lucro != null ? d.lucro : d.ganho - d.lanche;
     return '<button class="item" data-editar="' + esc(d.id) + '"><span class="t">' + dataBR(d.data, true) + '</span>' +
       '<span class="v ' + (v < 0 ? 'neg' : 'pos') + '">' + R$(v) + '</span><span class="d">' + det + '</span></button>';
   }).join('');
@@ -343,7 +352,8 @@ function listaDias(dias, noTanque){
 function render(){
   if (!pronto) return;
   const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
-  const c = calcular(lista, config.mediaPadrao);
+  const pct = Number(config.reservaPct) || 0;
+  const c = calcular(lista, config.mediaPadrao, pct);
   const app = $('app');
   let h = '';
   const atual = c.tanques.length ? c.tanques[c.tanques.length - 1] : null;
@@ -351,10 +361,10 @@ function render(){
   if (!atual){
     h += '<div class="tank"><div class="tank-in"><div><small>Como funciona</small></div>' +
       '<ol class="passos" style="padding-left:20px"><li>Abasteceu? Lance o valor, os litros e o km do painel.</li>' +
-      '<li>No fim de cada dia, lance o que ganhou na Uber e na 99 e o km do painel.</li>' +
+      '<li>Cada vez que sair para rodar, lance uma parcial: ganho na Uber, na 99, lanche e o km do painel. Pode ser mais de uma por dia.</li>' +
       '<li>No próximo abastecimento o tanque fecha e aparece a média real do carro e o lucro.</li></ol></div></div>';
   } else {
-    const a = atual.abast, pct = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
+    const a = atual.abast, cheio = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
     h += '<div class="tank"><div class="tank-in">' +
       '<div class="tank-head"><small>Tanque atual · lucro parcial</small><span>abastecido ' + dataBR(a.data, true) + '</span></div>' +
       '<div class="num lucro ' + (atual.lucro < 0 ? 'neg' : 'pos') + '">' + R$(atual.lucro) + '</div>' +
@@ -364,22 +374,24 @@ function render(){
         '<div><span class="lbl">Gasolina</span><span class="num">' + R$(atual.gasto) + '</span></div>' +
       '</div>' +
       '<div class="gauge"><div class="gauge-leg"><span>Vazio</span><span>Cheio</span></div>' +
-        '<div class="gauge-bar"><i style="width:' + pct.toFixed(0) + '%"></i></div>' +
+        '<div class="gauge-bar"><i style="width:' + cheio.toFixed(0) + '%"></i></div>' +
         '<p class="nota">' + n0(atual.km) + ' km rodados · restam cerca de ' + n1(atual.restoL) + ' L (' + n0(atual.restoKm) + ' km)</p></div>' +
+      (atual.lanche ? '<p class="nota">Lanche e outros gastos das parciais: ' + R$(atual.lanche) + ' (já descontados do lucro).</p>' : '') +
+      (pct > 0 ? '<p class="nota">Reserva de manutenção (' + n0(pct) + '%): ' + R$(atual.reserva) + ' · livre para você: <b class="' + (atual.livre < 0 ? 'neg' : 'pos') + '">' + R$(atual.livre) + '</b></p>' : '') +
       '<p class="nota">Abastecimento: ' + R$(a.valor) + ' · ' + n1(a.litros) + ' L · ' + R$(atual.preco) + ' o litro · painel em ' + n0(a.km) + ' km. ' +
         '<button class="link" data-editar="' + esc(a.id) + '">Corrigir</button></p>' +
       '<p class="nota">' + (atual.ganho >= a.valor ? 'O tanque já se pagou: sobram ' + R$(atual.ganho - a.valor) + ' acima do que você pôs de gasolina.' : 'Faltam ' + R$(a.valor - atual.ganho) + ' em corridas para pagar o tanque inteiro.') + '</p>' +
-      '<p class="nota">Gasto estimado com ' + n1(c.mediaRef) + ' km/l' + (c.mediaGeral ? ' (média real do carro).' : ' (referência). <button class="link" data-media>Alterar</button>') + '</p>' +
+      '<p class="nota">Gasto estimado com ' + n1(c.mediaRef) + ' km/l' + (c.mediaGeral ? ' (média real do carro).' : ' (referência).') + ' <button class="link" data-media>Ajustes</button>' + '</p>' +
       '</div></div>';
   }
 
-  h += '<div class="acoes"><button class="btn pri" data-novo="dia">+ Lançar dia</button><button class="btn" data-novo="abast">⛽ Abastecer</button></div>';
+  h += '<div class="acoes"><button class="btn pri" data-novo="dia">+ Lançar parcial</button><button class="btn" data-novo="abast">⛽ Abastecer</button></div>';
 
   if (atual){
-    h += '<div class="sec"><h2>Dias deste tanque</h2><div class="lista">' + listaDias(atual.dias, true) + '</div></div>';
+    h += '<div class="sec"><h2>Parciais deste tanque</h2><div class="lista">' + listaDias(atual.dias, true) + '</div></div>';
   }
   if (c.soltos.length){
-    h += '<div class="sec"><h2>Dias antes do primeiro abastecimento</h2><div class="lista">' + listaDias(c.soltos, false) + '</div></div>';
+    h += '<div class="sec"><h2>Parciais antes do primeiro abastecimento</h2><div class="lista">' + listaDias(c.soltos, false) + '</div></div>';
   }
 
   // resumo do mês
@@ -390,16 +402,21 @@ function render(){
     const comb = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto).reduce((s, r) => s + r.valor, 0);
     const [ma, mm] = mesVisto.split('-').map(Number);
     const nomeMes = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'short', year: 'numeric'}).replace('.', '').replace(' de ', '/');
-    const lucro = uber + n99 - comb;
+    const lanche = todosDias.reduce((s, d) => s + d.lanche, 0);
+    const nDias = new Set(todosDias.map(d => d.data)).size;
+    const lucro = uber + n99 - comb - lanche, reserva = lucro > 0 ? lucro * pct / 100 : 0;
     h += '<div class="sec"><div class="sec-head"><h2>Resumo do mês</h2><div class="mes-nav"><button data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nomeMes + '</b><button data-mes="1" aria-label="Próximo mês">›</button></div></div>' +
       '<div class="tabela">' +
       '<div class="linha"><span><span class="chip u">Uber</span>Ganhos</span><span class="num">' + R$(uber) + '</span></div>' +
       '<div class="linha"><span><span class="chip n">99</span>Ganhos</span><span class="num">' + R$(n99) + '</span></div>' +
       '<div class="linha"><span>Gasolina paga no mês</span><span class="num neg">' + R$(-comb) + '</span></div>' +
+      (lanche ? '<div class="linha"><span>Lanche e outros gastos</span><span class="num neg">' + R$(-lanche) + '</span></div>' : '') +
       '<div class="linha total"><span>Lucro do mês</span><span class="num ' + (lucro < 0 ? 'neg' : 'pos') + '">' + R$(lucro) + '</span></div>' +
-      '<div class="linha"><span>Dias rodados</span><span class="num">' + todosDias.length + '</span></div>' +
+      (pct > 0 ? '<div class="linha"><span>Reserva de manutenção (' + n0(pct) + '%)</span><span class="num">' + R$(reserva) + '</span></div>' +
+        '<div class="linha total"><span>Livre para você</span><span class="num ' + (lucro < 0 ? 'neg' : 'pos') + '">' + R$(lucro - reserva) + '</span></div>' : '') +
+      '<div class="linha"><span>Dias rodados</span><span class="num">' + nDias + ' (' + todosDias.length + ' parciais)</span></div>' +
       '<div class="linha"><span>Km rodados</span><span class="num">' + n0(km) + '</span></div>' +
-      (todosDias.length ? '<div class="linha"><span>Ganho médio por dia</span><span class="num">' + R$((uber + n99) / todosDias.length) + '</span></div>' : '') +
+      (nDias ? '<div class="linha"><span>Ganho médio por dia</span><span class="num">' + R$((uber + n99) / nDias) + '</span></div>' : '') +
       '</div></div>';
   }
 
@@ -414,11 +431,14 @@ function render(){
         '<span class="d">' + (ok ? n0(t.km) + ' km · ' + n1(t.media) + ' km/l · ' + R$(t.custoKm) + ' por km' : 'Km do painel fora de ordem, confira os abastecimentos') + '</span></summary>' +
         '<div class="dentro"><span>Gasolina: ' + R$(t.abast.valor) + ' (' + n1(t.abast.litros) + ' L a ' + R$(t.preco) + ')</span>' +
         '<span>Ganhos: Uber ' + R$(t.uber) + ' · 99 ' + R$(t.n99) + ' · total ' + R$(t.ganho) + '</span>' +
+        (t.lanche ? '<span>Lanche e outros gastos: ' + R$(t.lanche) + '</span>' : '') +
+        (pct > 0 ? '<span>Reserva de manutenção (' + n0(pct) + '%): ' + R$(t.reserva) + ' · livre para você: ' + R$(t.livre) + '</span>' : '') +
         '<button class="link" data-editar="' + esc(t.abast.id) + '">Corrigir abastecimento</button></div>' +
         (t.dias.length ? '<div>' + listaDias(t.dias, true) + '</div>' : '') + '</details>';
     }
     h += '</div></div>';
   }
+  h += '<button class="btn" data-media>Ajustes: média de referência e reserva de manutenção</button>';
   app.innerHTML = h;
 }
 
@@ -443,12 +463,13 @@ function dicaAbast(){
 }
 function abrirDia(id){
   const r = id ? regs.get(id) : null; editando = id || null;
-  $('tituloDia').textContent = r ? 'Corrigir dia' : 'Lançar dia';
+  $('tituloDia').textContent = r ? 'Corrigir parcial' : 'Lançar parcial';
   $('dData').value = r ? r.data : hoje();
   $('dUber').value = r ? paraCampo(r.uber, 2) : '';
   $('d99').value = r ? paraCampo(r.n99, 2) : '';
+  $('dLanche').value = r ? paraCampo(r.lanche, 2) : '';
   $('dKm').value = r && r.km ? r.km : '';
-  $('dErro').hidden = true; $('dExcluir').hidden = !r; armarExcluir($('dExcluir'), 'Excluir este dia');
+  $('dErro').hidden = true; $('dExcluir').hidden = !r; armarExcluir($('dExcluir'), 'Excluir esta parcial');
   $('folhaDia').hidden = false;
 }
 function erro(el, txt){ el.textContent = txt; el.hidden = false; }
@@ -472,18 +493,19 @@ $('formAbast').addEventListener('submit', e => {
 });
 $('formDia').addEventListener('submit', e => {
   e.preventDefault();
-  const d = {tipo: 'dia', data: $('dData').value, uber: lerValor($('dUber').value), n99: lerValor($('d99').value), km: lerKm($('dKm').value)};
+  const d = {tipo: 'dia', data: $('dData').value, uber: lerValor($('dUber').value), n99: lerValor($('d99').value), lanche: lerValor($('dLanche').value), km: lerKm($('dKm').value)};
   if (!d.data) return erro($('dErro'), 'Informe a data.');
   if (!(d.uber > 0) && !(d.n99 > 0)) return erro($('dErro'), 'Informe o ganho na Uber, na 99 ou nos dois.');
   const antigo = editando ? regs.get(editando) : null;
   d.criado = antigo && antigo.criado || Date.now();
-  concluir(() => gravar(editando || novoId('d'), d), $('dErro'), 'Dia salvo');
+  concluir(() => gravar(editando || novoId('d'), d), $('dErro'), 'Parcial salva');
 });
 $('formMedia').addEventListener('submit', e => {
   e.preventDefault();
-  const m = lerValor($('mMedia').value);
-  if (!(m > 0)) return;
-  concluir(() => gravar('config', {tipo: 'config', mediaPadrao: m}), $('mErro'), 'Média de referência salva');
+  const m = lerValor($('mMedia').value), p = lerValor($('mReserva').value);
+  if (!(m > 0)) return erro($('mErro'), 'Informe a média de referência em km por litro.');
+  if (p > 100) return erro($('mErro'), 'A reserva vai de 0 a 100%.');
+  concluir(() => gravar('config', {tipo: 'config', mediaPadrao: m, reservaPct: p}), $('mErro'), 'Ajustes salvos');
 });
 for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['dExcluir', 'dErro']]){
   $(btnId).addEventListener('click', ev => {
@@ -505,7 +527,7 @@ document.addEventListener('click', e => {
     const [a, m] = mesVisto.split('-').map(Number), d = new Date(a, m - 1 + Number(t.dataset.mes), 1);
     mesVisto = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); render(); return;
   }
-  if (t.hasAttribute('data-media')){ $('mMedia').value = paraCampo(config.mediaPadrao, 1); $('folhaMedia').hidden = false; }
+  if (t.hasAttribute('data-media')){ $('mMedia').value = paraCampo(config.mediaPadrao, 1); $('mReserva').value = paraCampo(config.reservaPct, 0); $('mErro').hidden = true; $('folhaMedia').hidden = false; }
 });
 
 iniciar();
