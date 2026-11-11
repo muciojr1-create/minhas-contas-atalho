@@ -598,12 +598,30 @@ function nomeFonte(url){
   for (const k in FONTES) if (h === k || h.endsWith('.' + k)) return FONTES[k];
   return h;
 }
+function telaBares(){
+  const bares = (agenda && Array.isArray(agenda.bares) ? agenda.bares : []).filter(b => b && b.nome);
+  if (!bares.length) return '';
+  const porReg = {};
+  for (const b of bares) (porReg[b.regiao || 'Outras regiões'] = porReg[b.regiao || 'Outras regiões'] || []).push(b);
+  let h = '<h2 style="margin-top:26px">Bares e casas da noite<span>' + bares.length + ' lugares</span></h2><p class="s" style="margin:-2px 0 10px">Lugares de movimento por região e os dias em que costumam lotar. Horários mudam: confira no perfil da casa.</p>';
+  for (const r of Object.keys(porReg).sort((a, b) => a.localeCompare(b, 'pt-BR'))){
+    h += '<div class="card"><div class="t" style="margin-bottom:6px">📍 ' + esc(r) + '</div>' + porReg[r].map(b => {
+      const url = /^https:\/\//.test(b.fonte || '') ? b.fonte : '';
+      return '<div class="ev"><span class="mid"><span class="t">' + esc(b.nome) + '</span>' +
+        (b.endereco ? '<span class="s" style="display:block">' + esc(b.endereco) + '</span>' : '') +
+        (b.quando ? '<span class="s" style="display:block">🕒 ' + esc(b.quando) + '</span>' : '') +
+        (b.estilo ? '<span style="display:block"><span class="tag">' + esc(b.estilo) + '</span></span>' : '') +
+        '<span class="fonte">Fonte: ' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(b.fonteNome || nomeFonte(url)) + '</a>' : esc(b.fonteNome || 'não informada')) + '</span></span></div>';
+    }).join('') + '</div>';
+  }
+  return h;
+}
 function telaEventos(){
   if (!agenda) return '<div class="card"><p class="empty">' + (col ? 'Carregando a agenda…' : 'A agenda de eventos aparece quando o app está ligado à sua conta Claude.') + '</p></div>';
   const hj = hoje(), am = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })();
   const itens = (Array.isArray(agenda.itens) ? agenda.itens : []).filter(e => e && e.data && (e.ate || e.data) >= hj);
   let h = '<p class="s" style="margin:4px 0 12px">Agenda de Brasília e região' + (agenda.atualizado ? ', atualizada em ' + dataBR(String(agenda.atualizado)) : '') + '. Datas e horários vêm de sites de agenda e ingressos: confirme antes de contar com o movimento.</p>';
-  if (!itens.length) return h + '<div class="card"><p class="empty">Nenhum evento da agenda daqui para a frente.<br>Peça ao Claude para atualizar a lista.</p></div>';
+  if (!itens.length) return h + '<div class="card"><p class="empty">Nenhum evento da agenda daqui para a frente.<br>Peça ao Claude para atualizar a lista.</p></div>' + telaBares();
   const cartao = e => {
     const tags = [];
     if (e.publico === 'grande') tags.push('<span class="tag grande">Grande público</span>');
@@ -626,7 +644,7 @@ function telaEventos(){
       '<div class="card">' + porDia[d].sort((a, b) => (a.hora || '99') < (b.hora || '99') ? -1 : 1).map(cartao).join('') + '</div>';
   }
   if (emCartaz.length) h += '<h2>Em cartaz o mês todo</h2><div class="card">' + emCartaz.map(cartao).join('') + '</div>';
-  return h;
+  return h + telaBares();
 }
 
 function render(){
