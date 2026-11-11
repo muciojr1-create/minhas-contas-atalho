@@ -180,7 +180,7 @@ label.f .marca{margin-right:4px}
     <label class="f">Data<input id="pData" type="date" required></label>
     <div class="grid2">
       <label class="f">Começou às<input id="pHIni" type="time"></label>
-      <label class="f">Hodômetro parcial na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 0"></label>
+      <label class="f">Hodômetro parcial na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 120"></label>
     </div>
     <div id="pFim">
       <div class="grid2">
@@ -267,6 +267,7 @@ function calcular(regs, mediaPadrao, reservaPct){
     let ultimo = 0;
     for (const d of t.dias){
       const ini = d.kmIni != null && d.kmIni !== '' ? Number(d.kmIni) : ultimo;
+      d.particular = ini > ultimo ? ini - ultimo : 0;     // km rodados por fora desde a parcial anterior
       if (d.km > 0 && d.km >= ini){ d.rodou = d.km - ini; if (d.km > ultimo) ultimo = d.km; d.acum = ultimo; } else d.rodou = null;
     }
     t.kmLeitura = ultimo;
@@ -290,6 +291,7 @@ function calcular(regs, mediaPadrao, reservaPct){
     for (const d of t.dias) base(d);
     t.uber = soma(t.dias, d => d.uber); t.n99 = soma(t.dias, d => d.n99); t.ganho = t.uber + t.n99;
     t.lanche = soma(t.dias, d => d.lanche); t.horas = soma(t.dias, d => d.horas); t.kmParc = soma(t.dias, d => d.rodou);
+    t.kmFora = Math.max(0, t.km - t.kmParc);            // uso particular (entre parciais e depois da última)
     if (t.fechado){
       t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
       t.gasto = t.abast.valor;
@@ -302,6 +304,8 @@ function calcular(regs, mediaPadrao, reservaPct){
     }
     t.lucro = t.ganho - t.abast.valor - t.lanche;          // o tanque inteiro que você pagou entra na conta
     t.lucroUsado = t.ganho - t.gasto - t.lanche;           // só a gasolina já gasta (para o tanque em uso)
+    t.gasolinaFora = t.custoKm != null ? t.kmFora * t.custoKm : 0;
+    t.lucroTrabalho = t.lucro + (t.fechado ? t.gasolinaFora : 0);
     t.reserva = t.lucro > 0 ? t.lucro * (reservaPct || 0) / 100 : 0;
     t.livre = t.lucro - t.reserva;
     t.porHora = t.horas > 0 ? t.lucro / t.horas : null;
@@ -454,7 +458,7 @@ function listaParciais(dias){
 const linha = (rot, val, cls, sub) => '<div class="linha' + (cls ? ' ' + cls : '') + '"><span>' + rot + (sub ? '<small>' + sub + '</small>' : '') + '</span><b>' + val + '</b></div>';
 
 function relatorio(t, c, pct, n){
-  const a = t.abast, fora = t.km - t.kmParc;
+  const a = t.abast;
   let h = '<div class="card rel"><div class="tanque-top"><span><span class="t">Tanque ' + n + ' · ' + dataBR(a.data) + (t.fechado ? ' a ' + dataBR(t.fim.data) : '') + '</span> ' +
     (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</b></div>';
   h += '<h4>⛽ Abastecimento</h4>' + linha(R$(a.valor) + ' de gasolina', n1(a.litros) + ' L', '', R$(t.preco) + ' o litro' + (a.hora ? ' · às ' + esc(a.hora) : '') + ' · <button class="link" data-editar="' + esc(a.id) + '">corrigir</button>');
@@ -464,6 +468,7 @@ function relatorio(t, c, pct, n){
     const v = d.lucro != null ? d.lucro : d.ganho - d.lanche;
     const km = d.rodou != null ? n0(d.km - d.rodou) + ' → ' + n0(d.km) + ' km (' + n0(d.rodou) + ' km)' : (d.km > 0 ? 'km final menor que o da saída, confira' : 'sem km');
     const g = []; if (d.uber) g.push(U + R$(d.uber)); if (d.n99) g.push(N + R$(d.n99)); if (d.lanche) g.push('🍔 ' + R$(d.lanche)); if (d.custo != null) g.push('⛽ ' + R$(d.custo));
+    if (d.particular > 0) h += '<p class="s" style="margin:0 0 8px;padding-left:12px">🏠 ' + n0(d.particular) + ' km de uso particular' + (t.custoKm != null ? ' (cerca de ' + R$(d.particular * t.custoKm) + ' de gasolina)' : '') + '</p>';
     h += '<button class="parc-row" data-editar="' + esc(d.id) + '"><span class="top"><span class="t">' + (i + 1) + 'ª · ' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
       '<b class="' + cor(v) + '">' + R$(v) + '</b></span>' +
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
@@ -475,16 +480,19 @@ function relatorio(t, c, pct, n){
     linha('⛽ Gasolina que você pôs', '<span class="neg">' + R$(-a.valor) + '</span>') +
     (t.lanche ? linha('🍔 Lanche e outros gastos', '<span class="neg">' + R$(-t.lanche) + '</span>') : '') +
     linha('Lucro do tanque', '<span class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</span>', 'total') +
+    (t.fechado && t.kmFora > 0 && t.custoKm != null ? linha('Lucro só do trabalho', '<span class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', '', 'sem os ' + n0(t.kmFora) + ' km particulares (' + R$(t.gasolinaFora) + ' de gasolina)') : '') +
     (pct > 0 && t.lucro > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '');
   h += '<h4>📏 Rodagem</h4>' +
-    linha('Km rodados', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar' : 'pela última parcial') : 'hodômetro agora') + (fora > 0 ? ' · ' + n0(fora) + ' km fora das parciais' : '')) +
+    linha('Km rodados', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar' : 'pela última parcial') : 'hodômetro agora') + '') +
+    linha('🚗 Em parciais (trabalho)', n0(t.kmParc) + ' km') +
+    (t.kmFora > 0 ? linha('🏠 Uso particular', n0(t.kmFora) + ' km', '', t.custoKm != null ? 'cerca de ' + R$(t.gasolinaFora) + ' de gasolina' : '') : '') +
     (t.fechado ? linha('Média do carro', t.media != null ? n1(t.media) + ' km/l' : '–', '', t.custoKm != null ? R$(t.custoKm) + ' de gasolina por km' : 'falta o km do tanque: corrija o abastecimento seguinte')
       : linha('Média do carro', 'sai ao abastecer', '', 'estimando ' + n1(c.mediaRef) + ' km/l, restam cerca de ' + n1(t.restoL) + ' L (' + n0(t.restoKm) + ' km)')) +
     linha('Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.horas > 0 ? R$(t.lucro / t.horas) + ' de lucro por hora' : '') +
     (t.km > 0 ? linha('Ganho por km', R$(t.ganho / t.km), '', R$(t.lucro / t.km) + ' de lucro por km') : '');
   if (t.fechado){
     h += t.lucro > 0 ? '<div class="veredito bom">Valeu a pena: sobraram ' + R$(t.lucro) + ' depois de pagar a gasolina' + (t.lanche ? ' e o lanche' : '') + '.' +
-        (t.horas > 0 ? '<small>Deu ' + R$(t.lucro / t.horas) + ' por hora trabalhada.</small>' : '') + '</div>'
+        (t.horas > 0 ? '<small>Deu ' + R$(t.lucro / t.horas) + ' por hora trabalhada' + (t.kmFora > 0 && t.custoKm != null ? '; sem o uso particular, o trabalho rendeu ' + R$(t.lucroTrabalho) : '') + '.</small>' : '') + '</div>'
       : '<div class="veredito ruim">Não valeu: faltaram ' + R$(-t.lucro) + ' para pagar a gasolina' + (t.lanche ? ' e o lanche' : '') + '.</div>';
   } else {
     h += '<div class="veredito ' + (t.lucro >= 0 ? 'bom' : 'neutro') + '">' + (t.lucro >= 0 ? 'O tanque já se pagou e sobram ' + R$(t.lucro) + '.' : 'Faltam ' + R$(-t.lucro) + ' para pagar o tanque' + (t.lanche ? ' e o lanche' : '') + '.') +
@@ -662,9 +670,13 @@ function lerParcial(){
 function previaParcial(){
   const d = lerParcial(), partes = [];
   if (modoParcial === 'iniciar'){
-    partes.push('Hodômetro parcial agora: ' + n0(kmAtual(editando)) + ' km (zera a cada abastecimento).');
+    const k = kmAtual(editando);
+    partes.push('A última parcial terminou em ' + n0(k) + ' km. Se usou o carro por fora, coloque o hodômetro de agora.');
+    if (d.kmIni != null && d.kmIni > k) partes.push(n0(d.kmIni - k) + ' km ficam como uso particular.');
     partes.push('Ao parar, toque em Encerrar para lançar o km final e os ganhos.');
   } else {
+    const k0 = kmAtual(editando);
+    if (!editando && d.kmIni != null && d.kmIni > k0) partes.push(n0(d.kmIni - k0) + ' km de uso particular antes desta saída.');
     if (d.kmIni != null && d.km > 0) partes.push(d.km >= d.kmIni ? 'Rodou ' + n0(d.km - d.kmIni) + ' km.' : 'O km final está menor que o da saída, confira.');
     const h = horasDe(d);
     if (h > 0) partes.push('Trabalhou ' + hm(h) + '.');
