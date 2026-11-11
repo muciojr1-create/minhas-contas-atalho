@@ -137,6 +137,9 @@ label.f{display:block;margin-bottom:12px;font-size:13px;color:var(--muted);font-
 label.f input{display:block;width:100%;min-width:0;margin-top:5px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;font-weight:400;color:var(--text)}
 label.f .marca{margin-right:4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hora-linha{display:flex;gap:6px;align-items:stretch;margin-top:5px}
+.hora-linha input{margin-top:0!important;flex:1;min-width:0}
+.agora{border:1px solid var(--line);background:var(--primary-soft);color:var(--primary-text);border-radius:12px;padding:0 10px;font-weight:700;font-size:13px;flex:none}
 .preview{background:var(--primary-soft);color:var(--primary-text);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .erro{background:var(--danger-soft);color:var(--danger);border-radius:12px;padding:10px 12px;font-size:14px;margin:0 0 12px}
 .actions{display:flex;gap:10px;margin-top:6px} .actions .btn{flex:1}
@@ -180,12 +183,12 @@ label.f .marca{margin-right:4px}
     <h3 id="tituloParcial">Parcial</h3>
     <label class="f">Data<input id="pData" type="date" required></label>
     <div class="grid2">
-      <label class="f">Começou às<input id="pHIni" type="time"></label>
+      <label class="f">Começou às<span class="hora-linha"><input id="pHIni" type="time"><button type="button" class="agora" data-agora="pHIni">Agora</button></span></label>
       <label class="f">Hodômetro parcial na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 120"></label>
     </div>
     <div id="pFim">
       <div class="grid2">
-        <label class="f">Terminou às<input id="pHFim" type="time"></label>
+        <label class="f">Terminou às<span class="hora-linha"><input id="pHFim" type="time"><button type="button" class="agora" data-agora="pHFim">Agora</button></span></label>
         <label class="f">Hodômetro parcial ao parar<input id="pKm" inputmode="numeric" placeholder="ex.: 100"></label>
       </div>
       <div class="grid2">
@@ -672,7 +675,8 @@ function abrirParcial(modo, id){
   $('pData').value = r ? r.data : hoje();
   $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? agora() : '');
   $('pKmIni').value = r ? (r.kmIni != null ? r.kmIni : '') : kmAtual();
-  $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' ? agora() : '');
+  $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' || m === 'completa' ? agora() : '');
+  fimMexido = !!(r && !r.aberta);
   $('pKm').value = r && r.km ? r.km : '';
   $('pUber').value = r ? paraCampo(r.uber, 2) : '';
   $('p99').value = r ? paraCampo(r.n99, 2) : '';
@@ -680,6 +684,12 @@ function abrirParcial(modo, id){
   $('pErro').hidden = true; $('pExcluir').hidden = !r; armarExcluir($('pExcluir'));
   previaParcial(); $('folhaParcial').hidden = false;
 }
+let fimMexido = false;
+setInterval(() => {
+  if ($('folhaParcial').hidden || fimMexido || $('pFim').hidden || (modoParcial !== 'encerrar' && modoParcial !== 'completa')) return;
+  if (document.activeElement === $('pHFim')) return;
+  const h = agora(); if ($('pHFim').value !== h){ $('pHFim').value = h; previaParcial(); }
+}, 20000);
 function lerParcial(){
   return {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKmOpc($('pKmIni').value), hFim: $('pHFim').value,
     km: lerKm($('pKm').value), uber: lerValor($('pUber').value), n99: lerValor($('p99').value), lanche: lerValor($('pLanche').value)};
@@ -703,7 +713,7 @@ function previaParcial(){
   }
   $('pPrev').textContent = partes.join(' '); $('pPrev').hidden = !partes.length;
 }
-$('formParcial').addEventListener('input', previaParcial);
+$('formParcial').addEventListener('input', e => { if (e.target.id === 'pHFim') fimMexido = true; previaParcial(); });
 $('formParcial').addEventListener('submit', e => {
   e.preventDefault();
   const d = lerParcial(), el = $('pErro');
@@ -770,9 +780,10 @@ for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['pExcluir', 'pErro']]){
 $('fab').addEventListener('click', abrirMenu);
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('fundo')) return fecharFolhas();
-  const t = e.target.closest('[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
+  const t = e.target.closest('[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
   if (!t) return;
   if (t.hasAttribute('data-fechar')) return fecharFolhas();
+  if (t.dataset.agora){ $(t.dataset.agora).value = agora(); if (t.dataset.agora === 'pHFim') fimMexido = false; previaParcial(); return; }
   if (t.dataset.tab){ aba = t.dataset.tab; try { localStorage.setItem('rodagem-aba', aba); } catch (er) {} render(); window.scrollTo(0, 0); return; }
   if (t.dataset.novo === 'abast') return abrirAbast();
   if (t.dataset.novo === 'encerrar'){ const ab = parcialAberta(); return ab ? abrirParcial('encerrar', ab.id) : abrirParcial('completa'); }
