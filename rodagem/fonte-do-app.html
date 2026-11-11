@@ -1,0 +1,512 @@
+<title>Rodagem Uber e 99</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: coluna única de celular. O tanque atual é o painel escuro do topo (como o painel do carro);
+   abaixo vêm os dias, o resumo do mês e os tanques fechados, em listas claras e planas. */
+:root{
+  --bg:#edeff2; --surface:#ffffff; --ink:#161b22; --muted:#5b6573; --line:#d6dbe2;
+  --amber:#f2b01e; --amber-ink:#231a00;
+  --good:#0f7a57; --bad:#bf352d;
+  --tank-bg:#1b2430; --tank-fg:#f3f5f8; --tank-muted:#a4b0c0; --tank-line:#324052; --tank-good:#4ad6a0; --tank-bad:#ff8a80;
+  --shade:rgba(10,14,20,.5);
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1217; --surface:#171d25; --ink:#e8ecf1; --muted:#93a0b1; --line:#2a333f;
+  --good:#3ecf98; --bad:#ff7a70; --tank-bg:#1d2632; --shade:rgba(0,0,0,.65); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1217; --surface:#171d25; --ink:#e8ecf1; --muted:#93a0b1; --line:#2a333f;
+  --good:#3ecf98; --bad:#ff7a70; --tank-bg:#1d2632; --shade:rgba(0,0,0,.65); color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);
+  padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,.num{font-family:var(--display);font-variant-numeric:tabular-nums}
+h1{font-size:26px;font-weight:700;margin:0;line-height:1.1}
+h2{font-size:19px;font-weight:600;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.status{font-size:12px;color:var(--muted);text-align:right}
+.aviso{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:8px;padding:10px 12px;font-size:13px}
+
+/* painel do tanque */
+.tank{background:var(--tank-bg);color:var(--tank-fg);border-radius:16px;overflow:hidden}
+.tank::before{content:"";display:block;height:6px;
+  background:repeating-linear-gradient(90deg,var(--amber) 0 26px,transparent 26px 44px)}
+.tank-in{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.tank small,.tank .lbl{color:var(--tank-muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.tank-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.tank-head span{color:var(--tank-muted);font-size:13px}
+.lucro{font-size:46px;font-weight:700;line-height:1}
+.lucro.pos{color:var(--tank-good)} .lucro.neg{color:var(--tank-bad)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--tank-line);padding-top:12px}
+.grid3 .num{font-size:20px;font-weight:600;display:block}
+.gauge{display:flex;flex-direction:column;gap:5px}
+.gauge-bar{height:10px;border-radius:5px;background:var(--tank-line);overflow:hidden}
+.gauge-bar i{display:block;height:100%;background:var(--amber);border-radius:5px}
+.gauge-leg{display:flex;justify-content:space-between;font-size:12px;color:var(--tank-muted)}
+.tank .nota{font-size:12.5px;color:var(--tank-muted);margin:0}
+.link{background:none;border:0;padding:0;text-decoration:underline;color:inherit}
+
+.acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 10px;font-weight:600;font-size:15px}
+.btn.pri{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.btn.danger{color:var(--bad)}
+
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lista{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .t{font-weight:600}
+.item .v{font-family:var(--display);font-variant-numeric:tabular-nums;font-size:18px;font-weight:600;text-align:right}
+.item .d{grid-column:1/-1;color:var(--muted);font-size:13px;min-width:0}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.tank .pos{color:var(--tank-good)} .tank .neg{color:var(--tank-bad)}
+.chip{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;margin-right:4px;vertical-align:1px}
+.chip.u{background:var(--ink);color:var(--surface)} .chip.n{background:var(--amber);color:var(--amber-ink)}
+.vazio{color:var(--muted);padding:14px;margin:0;font-size:14px}
+
+.mes-nav{display:flex;align-items:center;gap:6px}
+.mes-nav button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1}
+.mes-nav b{min-width:112px;text-align:center;font-weight:600}
+.tabela{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 14px}
+.linha{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.linha:first-child{border-top:0}
+.linha .num{font-size:17px;font-weight:600}
+.linha.total{font-weight:600} .linha.total .num{font-size:22px}
+
+details.fechado{border-top:1px solid var(--line)}
+details.fechado:first-child{border-top:0}
+details.fechado summary{list-style:none;cursor:pointer}
+details.fechado summary::-webkit-details-marker{display:none}
+details.fechado .dentro{padding:0 14px 12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--muted)}
+details.fechado .dentro button{align-self:flex-start}
+
+.passos{margin:0;padding:6px 14px 6px 34px}
+.passos li{padding:6px 0}
+
+/* folha de lançamento */
+.folha-fundo{position:fixed;inset:0;background:var(--shade);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.folha{background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:100%;overflow:auto;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;gap:12px}
+.campo{display:flex;flex-direction:column;gap:4px}
+.campo label{font-size:13px;font-weight:500;color:var(--muted)}
+.campo input{font:600 20px var(--display);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dica{font-size:13px;color:var(--muted);margin:0;min-height:1.4em}
+.erro{color:var(--bad);font-size:13.5px;margin:0}
+.folha-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Rodagem Uber e 99</h1>
+    <div class="status" id="status">Carregando…</div>
+  </div>
+  <div id="aviso" class="aviso" hidden></div>
+  <div id="app" class="wrap" style="max-width:none"><p class="vazio">Carregando seus lançamentos…</p></div>
+</div>
+
+<div class="folha-fundo" id="folhaAbast" hidden>
+  <form class="folha" id="formAbast" autocomplete="off">
+    <h2 id="tituloAbast">Abastecer</h2>
+    <div class="campo"><label for="aData">Data</label><input id="aData" type="date" required></div>
+    <div class="duas">
+      <div class="campo"><label for="aValor">Valor pago (R$)</label><input id="aValor" inputmode="decimal" placeholder="0,00"></div>
+      <div class="campo"><label for="aLitros">Litros</label><input id="aLitros" inputmode="decimal" placeholder="0,0"></div>
+    </div>
+    <div class="campo"><label for="aKm">Km do painel na hora de abastecer</label><input id="aKm" inputmode="numeric" placeholder="ex.: 85320"></div>
+    <p class="dica" id="aDica"></p>
+    <p class="erro" id="aErro" hidden></p>
+    <div class="folha-acoes">
+      <button type="button" class="btn" data-fechar>Cancelar</button>
+      <button type="submit" class="btn pri">Salvar</button>
+    </div>
+    <button type="button" class="btn danger" id="aExcluir" hidden>Excluir abastecimento</button>
+  </form>
+</div>
+
+<div class="folha-fundo" id="folhaDia" hidden>
+  <form class="folha" id="formDia" autocomplete="off">
+    <h2 id="tituloDia">Lançar dia</h2>
+    <div class="campo"><label for="dData">Data</label><input id="dData" type="date" required></div>
+    <div class="duas">
+      <div class="campo"><label for="dUber">Ganho na Uber (R$)</label><input id="dUber" inputmode="decimal" placeholder="0,00"></div>
+      <div class="campo"><label for="d99">Ganho na 99 (R$)</label><input id="d99" inputmode="decimal" placeholder="0,00"></div>
+    </div>
+    <div class="campo"><label for="dKm">Km do painel ao encerrar o dia</label><input id="dKm" inputmode="numeric" placeholder="ex.: 85510"></div>
+    <p class="dica">Com o km do painel o app calcula quanto de gasolina o dia gastou. Sem ele, o dia entra só com o ganho.</p>
+    <p class="erro" id="dErro" hidden></p>
+    <div class="folha-acoes">
+      <button type="button" class="btn" data-fechar>Cancelar</button>
+      <button type="submit" class="btn pri">Salvar</button>
+    </div>
+    <button type="button" class="btn danger" id="dExcluir" hidden>Excluir este dia</button>
+  </form>
+</div>
+
+<div class="folha-fundo" id="folhaMedia" hidden>
+  <form class="folha" id="formMedia" autocomplete="off">
+    <h2>Média de referência</h2>
+    <p class="dica">Usada para estimar o gasto de gasolina enquanto nenhum tanque foi fechado. Depois do segundo abastecimento o app passa a usar a média real do seu carro.</p>
+    <div class="campo"><label for="mMedia">Km por litro</label><input id="mMedia" inputmode="decimal" placeholder="10"></div>
+    <p class="erro" id="mErro" hidden></p>
+    <div class="folha-acoes">
+      <button type="button" class="btn" data-fechar>Cancelar</button>
+      <button type="submit" class="btn pri">Salvar</button>
+    </div>
+  </form>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ---------- contas (função pura) ----------
+function calcular(regs, mediaPadrao){
+  const abs = regs.filter(r => r.tipo === 'abast');
+  const dias = regs.filter(r => r.tipo === 'dia');
+  const ordem = (a, b) => {
+    if (a.data !== b.data) return a.data < b.data ? -1 : 1;
+    if (a.tipo !== b.tipo){
+      const ab = a.tipo === 'abast' ? a : b, di = a.tipo === 'dia' ? a : b;
+      const abPrimeiro = !(di.km > 0) || di.km > ab.km;   // dia sem km, ou que terminou depois do posto
+      return (a === ab) === abPrimeiro ? -1 : 1;
+    }
+    if (a.km > 0 && b.km > 0 && a.km !== b.km) return a.km - b.km;
+    return (a.criado || 0) - (b.criado || 0);
+  };
+  const seq = [...abs, ...dias].sort(ordem);
+  const tanques = [], soltos = [];
+  let atual = null;
+  for (const r of seq){
+    if (r.tipo === 'abast'){ atual = {abast: r, dias: [], fechado: false}; tanques.push(atual); }
+    else (atual ? atual.dias : soltos).push({...r});
+  }
+  let kmTot = 0, lTot = 0;
+  tanques.forEach((t, i) => {
+    const prox = tanques[i + 1];
+    t.preco = t.abast.litros > 0 ? t.abast.valor / t.abast.litros : 0;
+    if (prox){
+      t.fechado = true; t.fim = prox.abast;
+      t.km = prox.abast.km - t.abast.km;
+      if (t.km > 0 && t.abast.litros > 0){ t.media = t.km / t.abast.litros; kmTot += t.km; lTot += t.abast.litros; }
+    }
+  });
+  const mediaGeral = lTot > 0 ? kmTot / lTot : null;
+  const mediaRef = mediaGeral || mediaPadrao || 10;
+  for (const t of tanques){
+    let ultimo = t.abast.km;
+    for (const d of t.dias){
+      d.ganho = (d.uber || 0) + (d.n99 || 0);
+      if (d.km > 0 && d.km >= ultimo){ d.rodou = d.km - ultimo; ultimo = d.km; } else d.rodou = null;
+    }
+    t.uber = t.dias.reduce((s, d) => s + (d.uber || 0), 0);
+    t.n99 = t.dias.reduce((s, d) => s + (d.n99 || 0), 0);
+    t.ganho = t.uber + t.n99;
+    if (t.fechado){
+      t.custoKm = t.km > 0 ? t.abast.valor / t.km : null;
+      t.gasto = t.abast.valor;
+    } else {
+      t.km = ultimo - t.abast.km;
+      t.custoKm = t.preco / mediaRef;
+      t.gasto = Math.min(t.abast.valor, t.km * t.custoKm);
+      t.restoL = Math.max(0, t.abast.litros - t.km / mediaRef);
+      t.restoKm = t.restoL * mediaRef;
+    }
+    t.lucro = t.ganho - t.gasto;
+    for (const d of t.dias){
+      d.custo = d.rodou != null && t.custoKm != null ? d.rodou * t.custoKm : null;
+      d.lucro = d.custo != null ? d.ganho - d.custo : null;
+    }
+  }
+  for (const d of soltos){ d.ganho = (d.uber || 0) + (d.n99 || 0); d.rodou = null; d.custo = null; d.lucro = null; }
+  return {tanques, soltos, mediaGeral, mediaRef};
+}
+
+// ---------- formatação ----------
+const R$ = v => (v < 0 ? '−' : '') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const n1 = v => v.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+const n0 = v => Math.round(v).toLocaleString('pt-BR');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function dataBR(iso, comSemana){
+  const [a, m, d] = String(iso).split('-').map(Number);
+  if (!a || !m || !d) return esc(iso);
+  const dt = new Date(a, m - 1, d);
+  return dt.toLocaleDateString('pt-BR', comSemana ? {weekday: 'short', day: '2-digit', month: '2-digit'} : {day: '2-digit', month: '2-digit'}).replace('.', '');
+}
+function lerValor(txt){
+  let s = String(txt || '').trim().replace(/[^\d.,]/g, '');
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(s);
+  return isFinite(v) ? v : 0;
+}
+const lerKm = txt => parseInt(String(txt || '').replace(/\D/g, ''), 10) || 0;
+const paraCampo = (v, casas) => v ? v.toLocaleString('pt-BR', {minimumFractionDigits: casas, maximumFractionDigits: casas, useGrouping: false}) : '';
+
+// ---------- estado e armazenamento ----------
+const $ = id => document.getElementById(id);
+const LOCAL = 'rodagem-v1';
+let regs = new Map();           // id -> registro
+let config = {mediaPadrao: 10};
+let col = null;                 // coleção no banco (null = guardando só neste aparelho)
+let pronto = false;
+let mesVisto = hoje().slice(0, 7);
+let editando = null;
+
+function salvarLocal(){
+  try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {}
+}
+function novoId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+async function gravar(id, dados){
+  if (col){ await col.doc(id).set(dados); }
+  else { if (id === 'config') config = dados; else regs.set(id, dados); salvarLocal(); render(); }
+}
+async function apagar(id){
+  if (col){ await col.doc(id).delete(); }
+  else { regs.delete(id); salvarLocal(); render(); }
+}
+function aviso(txt){ const a = $('aviso'); a.hidden = !txt; a.textContent = txt || ''; }
+let toastT;
+function toast(txt){ const t = $('toast'); t.textContent = txt; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+function modoLocal(motivo){
+  col = null;
+  try {
+    const g = JSON.parse(localStorage.getItem(LOCAL) || 'null');
+    if (g){ regs = new Map(g.regs || []); config = g.config || config; }
+  } catch (e) {}
+  pronto = true;
+  $('status').textContent = 'Só neste aparelho';
+  aviso(motivo);
+  render();
+}
+
+async function iniciar(){
+  let db = null, user = null, uid = null;
+  try {
+    if (window.claude && window.claude.use){
+      [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+      if (user) uid = await user.id();
+    }
+  } catch (e) {}
+  if (!db || !uid){
+    modoLocal('Não foi possível ligar à sua conta Claude agora. O que você lançar fica guardado só neste aparelho.');
+    return;
+  }
+  col = db.collection('data/users/' + uid);
+  const demora = setTimeout(() => {
+    $('status').textContent = 'Sem conexão';
+    aviso(pronto ? 'Sem resposta do servidor. Os dados na tela podem estar desatualizados.' : 'Ainda não foi possível buscar seus lançamentos. Confira a internet.');
+  }, 10000);
+  col.onSnapshot(snap => {
+    const m = new Map();
+    for (const d of snap.docs){
+      const v = d.data();
+      if (!v) continue;
+      if (d.id === 'config') config = {mediaPadrao: Number(v.mediaPadrao) || 10};
+      else if (v.tipo === 'abast' || v.tipo === 'dia') m.set(d.id, v);
+    }
+    regs = m; pronto = true;
+    if (!snap.metadata.fromCache){ clearTimeout(demora); aviso(''); $('status').textContent = snap.metadata.hasPendingWrites ? 'Salvando…' : 'Salvo na sua conta'; }
+    render();
+  }, err => {
+    clearTimeout(demora);
+    if (!pronto) modoLocal('Não foi possível abrir seus dados na conta Claude. O que você lançar agora fica só neste aparelho.');
+    else { $('status').textContent = 'Desconectado'; aviso('A ligação com a sua conta caiu. Feche e abra o app para continuar lançando.'); }
+  });
+}
+
+// ---------- tela ----------
+function listaDias(dias, noTanque){
+  if (!dias.length) return '<p class="vazio">Nenhum dia lançado ainda neste tanque.</p>';
+  return [...dias].reverse().map(d => {
+    const partes = [];
+    if (d.uber) partes.push('<span class="chip u">Uber</span>' + R$(d.uber));
+    if (d.n99) partes.push('<span class="chip n">99</span>' + R$(d.n99));
+    let det = partes.join(' &nbsp; ');
+    if (d.rodou != null) det += (det ? '<br>' : '') + n0(d.rodou) + ' km rodados · gasolina ' + R$(d.custo) + (d.rodou > 0 ? ' · ' + R$(d.ganho / d.rodou) + ' por km' : '');
+    else if (noTanque) det += (det ? '<br>' : '') + (d.km > 0 ? 'Km do painel menor que o anterior, confira' : 'Sem km do painel');
+    const v = d.lucro != null ? d.lucro : d.ganho;
+    return '<button class="item" data-editar="' + esc(d.id) + '"><span class="t">' + dataBR(d.data, true) + '</span>' +
+      '<span class="v ' + (v < 0 ? 'neg' : 'pos') + '">' + R$(v) + '</span><span class="d">' + det + '</span></button>';
+  }).join('');
+}
+
+function render(){
+  if (!pronto) return;
+  const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
+  const c = calcular(lista, config.mediaPadrao);
+  const app = $('app');
+  let h = '';
+  const atual = c.tanques.length ? c.tanques[c.tanques.length - 1] : null;
+
+  if (!atual){
+    h += '<div class="tank"><div class="tank-in"><div><small>Como funciona</small></div>' +
+      '<ol class="passos" style="padding-left:20px"><li>Abasteceu? Lance o valor, os litros e o km do painel.</li>' +
+      '<li>No fim de cada dia, lance o que ganhou na Uber e na 99 e o km do painel.</li>' +
+      '<li>No próximo abastecimento o tanque fecha e aparece a média real do carro e o lucro.</li></ol></div></div>';
+  } else {
+    const a = atual.abast, pct = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
+    h += '<div class="tank"><div class="tank-in">' +
+      '<div class="tank-head"><small>Tanque atual · lucro parcial</small><span>abastecido ' + dataBR(a.data, true) + '</span></div>' +
+      '<div class="num lucro ' + (atual.lucro < 0 ? 'neg' : 'pos') + '">' + R$(atual.lucro) + '</div>' +
+      '<div class="grid3">' +
+        '<div><span class="lbl">Uber</span><span class="num">' + R$(atual.uber) + '</span></div>' +
+        '<div><span class="lbl">99</span><span class="num">' + R$(atual.n99) + '</span></div>' +
+        '<div><span class="lbl">Gasolina</span><span class="num">' + R$(atual.gasto) + '</span></div>' +
+      '</div>' +
+      '<div class="gauge"><div class="gauge-leg"><span>Vazio</span><span>Cheio</span></div>' +
+        '<div class="gauge-bar"><i style="width:' + pct.toFixed(0) + '%"></i></div>' +
+        '<p class="nota">' + n0(atual.km) + ' km rodados · restam cerca de ' + n1(atual.restoL) + ' L (' + n0(atual.restoKm) + ' km)</p></div>' +
+      '<p class="nota">Abastecimento: ' + R$(a.valor) + ' · ' + n1(a.litros) + ' L · ' + R$(atual.preco) + ' o litro · painel em ' + n0(a.km) + ' km. ' +
+        '<button class="link" data-editar="' + esc(a.id) + '">Corrigir</button></p>' +
+      '<p class="nota">' + (atual.ganho >= a.valor ? 'O tanque já se pagou: sobram ' + R$(atual.ganho - a.valor) + ' acima do que você pôs de gasolina.' : 'Faltam ' + R$(a.valor - atual.ganho) + ' em corridas para pagar o tanque inteiro.') + '</p>' +
+      '<p class="nota">Gasto estimado com ' + n1(c.mediaRef) + ' km/l' + (c.mediaGeral ? ' (média real do carro).' : ' (referência). <button class="link" data-media>Alterar</button>') + '</p>' +
+      '</div></div>';
+  }
+
+  h += '<div class="acoes"><button class="btn pri" data-novo="dia">+ Lançar dia</button><button class="btn" data-novo="abast">⛽ Abastecer</button></div>';
+
+  if (atual){
+    h += '<div class="sec"><h2>Dias deste tanque</h2><div class="lista">' + listaDias(atual.dias, true) + '</div></div>';
+  }
+  if (c.soltos.length){
+    h += '<div class="sec"><h2>Dias antes do primeiro abastecimento</h2><div class="lista">' + listaDias(c.soltos, false) + '</div></div>';
+  }
+
+  // resumo do mês
+  if (lista.length){
+    const todosDias = [...c.soltos, ...c.tanques.flatMap(t => t.dias)].filter(d => d.data.slice(0, 7) === mesVisto);
+    const uber = todosDias.reduce((s, d) => s + (d.uber || 0), 0), n99 = todosDias.reduce((s, d) => s + (d.n99 || 0), 0);
+    const km = todosDias.reduce((s, d) => s + (d.rodou || 0), 0);
+    const comb = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto).reduce((s, r) => s + r.valor, 0);
+    const [ma, mm] = mesVisto.split('-').map(Number);
+    const nomeMes = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'short', year: 'numeric'}).replace('.', '').replace(' de ', '/');
+    const lucro = uber + n99 - comb;
+    h += '<div class="sec"><div class="sec-head"><h2>Resumo do mês</h2><div class="mes-nav"><button data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nomeMes + '</b><button data-mes="1" aria-label="Próximo mês">›</button></div></div>' +
+      '<div class="tabela">' +
+      '<div class="linha"><span><span class="chip u">Uber</span>Ganhos</span><span class="num">' + R$(uber) + '</span></div>' +
+      '<div class="linha"><span><span class="chip n">99</span>Ganhos</span><span class="num">' + R$(n99) + '</span></div>' +
+      '<div class="linha"><span>Gasolina paga no mês</span><span class="num neg">' + R$(-comb) + '</span></div>' +
+      '<div class="linha total"><span>Lucro do mês</span><span class="num ' + (lucro < 0 ? 'neg' : 'pos') + '">' + R$(lucro) + '</span></div>' +
+      '<div class="linha"><span>Dias rodados</span><span class="num">' + todosDias.length + '</span></div>' +
+      '<div class="linha"><span>Km rodados</span><span class="num">' + n0(km) + '</span></div>' +
+      (todosDias.length ? '<div class="linha"><span>Ganho médio por dia</span><span class="num">' + R$((uber + n99) / todosDias.length) + '</span></div>' : '') +
+      '</div></div>';
+  }
+
+  // tanques fechados
+  const fechados = c.tanques.filter(t => t.fechado).reverse();
+  if (fechados.length){
+    h += '<div class="sec"><div class="sec-head"><h2>Tanques fechados</h2>' + (c.mediaGeral ? '<span class="num" style="font-size:17px;font-weight:600">média geral ' + n1(c.mediaGeral) + ' km/l</span>' : '') + '</div><div class="lista">';
+    for (const t of fechados){
+      const ok = t.media != null;
+      h += '<details class="fechado"><summary class="item"><span class="t">' + dataBR(t.abast.data) + ' a ' + dataBR(t.fim.data) + '</span>' +
+        '<span class="v ' + (t.lucro < 0 ? 'neg' : 'pos') + '">' + R$(t.lucro) + '</span>' +
+        '<span class="d">' + (ok ? n0(t.km) + ' km · ' + n1(t.media) + ' km/l · ' + R$(t.custoKm) + ' por km' : 'Km do painel fora de ordem, confira os abastecimentos') + '</span></summary>' +
+        '<div class="dentro"><span>Gasolina: ' + R$(t.abast.valor) + ' (' + n1(t.abast.litros) + ' L a ' + R$(t.preco) + ')</span>' +
+        '<span>Ganhos: Uber ' + R$(t.uber) + ' · 99 ' + R$(t.n99) + ' · total ' + R$(t.ganho) + '</span>' +
+        '<button class="link" data-editar="' + esc(t.abast.id) + '">Corrigir abastecimento</button></div>' +
+        (t.dias.length ? '<div>' + listaDias(t.dias, true) + '</div>' : '') + '</details>';
+    }
+    h += '</div></div>';
+  }
+  app.innerHTML = h;
+}
+
+// ---------- folhas de lançamento ----------
+function fecharFolhas(){ for (const id of ['folhaAbast', 'folhaDia', 'folhaMedia']) $(id).hidden = true; editando = null; }
+function ultimoKm(){ let k = 0; for (const r of regs.values()) if (r.km > k) k = r.km; return k; }
+function armarExcluir(btn, rotulo){ btn.dataset.certo = ''; btn.textContent = rotulo; }
+
+function abrirAbast(id){
+  const r = id ? regs.get(id) : null; editando = id || null;
+  $('tituloAbast').textContent = r ? 'Corrigir abastecimento' : 'Abastecer';
+  $('aData').value = r ? r.data : hoje();
+  $('aValor').value = r ? paraCampo(r.valor, 2) : '';
+  $('aLitros').value = r ? paraCampo(r.litros, 2) : '';
+  $('aKm').value = r ? r.km : '';
+  $('aErro').hidden = true; $('aExcluir').hidden = !r; armarExcluir($('aExcluir'), 'Excluir abastecimento');
+  dicaAbast(); $('folhaAbast').hidden = false;
+}
+function dicaAbast(){
+  const v = lerValor($('aValor').value), l = lerValor($('aLitros').value), k = ultimoKm();
+  $('aDica').textContent = (v > 0 && l > 0 ? R$(v / l) + ' o litro. ' : '') + (k && !editando ? 'Último km lançado: ' + n0(k) + '.' : '');
+}
+function abrirDia(id){
+  const r = id ? regs.get(id) : null; editando = id || null;
+  $('tituloDia').textContent = r ? 'Corrigir dia' : 'Lançar dia';
+  $('dData').value = r ? r.data : hoje();
+  $('dUber').value = r ? paraCampo(r.uber, 2) : '';
+  $('d99').value = r ? paraCampo(r.n99, 2) : '';
+  $('dKm').value = r && r.km ? r.km : '';
+  $('dErro').hidden = true; $('dExcluir').hidden = !r; armarExcluir($('dExcluir'), 'Excluir este dia');
+  $('folhaDia').hidden = false;
+}
+function erro(el, txt){ el.textContent = txt; el.hidden = false; }
+async function concluir(acao, elErro, msg){
+  try { await acao(); fecharFolhas(); toast(msg); }
+  catch (e) {
+    erro(elErro, e && e.code === 'quota_exceeded' ? 'O espaço de dados encheu. Apague lançamentos antigos e tente de novo.' : 'Não foi possível salvar agora. Confira a internet e toque em Salvar de novo.');
+  }
+}
+
+$('formAbast').addEventListener('input', dicaAbast);
+$('formAbast').addEventListener('submit', e => {
+  e.preventDefault();
+  const d = {tipo: 'abast', data: $('aData').value, valor: lerValor($('aValor').value), litros: lerValor($('aLitros').value), km: lerKm($('aKm').value)};
+  if (!d.data) return erro($('aErro'), 'Informe a data.');
+  if (!(d.valor > 0) || !(d.litros > 0)) return erro($('aErro'), 'Informe o valor pago e os litros.');
+  if (!(d.km > 0)) return erro($('aErro'), 'Informe o km do painel. É ele que permite calcular a média do carro.');
+  const antigo = editando ? regs.get(editando) : null;
+  d.criado = antigo && antigo.criado || Date.now();
+  concluir(() => gravar(editando || novoId('a'), d), $('aErro'), 'Abastecimento salvo');
+});
+$('formDia').addEventListener('submit', e => {
+  e.preventDefault();
+  const d = {tipo: 'dia', data: $('dData').value, uber: lerValor($('dUber').value), n99: lerValor($('d99').value), km: lerKm($('dKm').value)};
+  if (!d.data) return erro($('dErro'), 'Informe a data.');
+  if (!(d.uber > 0) && !(d.n99 > 0)) return erro($('dErro'), 'Informe o ganho na Uber, na 99 ou nos dois.');
+  const antigo = editando ? regs.get(editando) : null;
+  d.criado = antigo && antigo.criado || Date.now();
+  concluir(() => gravar(editando || novoId('d'), d), $('dErro'), 'Dia salvo');
+});
+$('formMedia').addEventListener('submit', e => {
+  e.preventDefault();
+  const m = lerValor($('mMedia').value);
+  if (!(m > 0)) return;
+  concluir(() => gravar('config', {tipo: 'config', mediaPadrao: m}), $('mErro'), 'Média de referência salva');
+});
+for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['dExcluir', 'dErro']]){
+  $(btnId).addEventListener('click', ev => {
+    const b = ev.currentTarget;
+    if (!b.dataset.certo){ b.dataset.certo = '1'; b.textContent = 'Toque de novo para excluir de vez'; return; }
+    const id = editando;
+    concluir(() => apagar(id), $(elErro), 'Excluído');
+  });
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-fechar],[data-novo],[data-editar],[data-mes],[data-media]');
+  if (e.target.classList && e.target.classList.contains('folha-fundo')) return fecharFolhas();
+  if (!t) return;
+  if (t.hasAttribute('data-fechar')) return fecharFolhas();
+  if (t.dataset.novo === 'abast') return abrirAbast();
+  if (t.dataset.novo === 'dia') return abrirDia();
+  if (t.dataset.editar){ const r = regs.get(t.dataset.editar); if (r) (r.tipo === 'abast' ? abrirAbast : abrirDia)(t.dataset.editar); return; }
+  if (t.dataset.mes){
+    const [a, m] = mesVisto.split('-').map(Number), d = new Date(a, m - 1 + Number(t.dataset.mes), 1);
+    mesVisto = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); render(); return;
+  }
+  if (t.hasAttribute('data-media')){ $('mMedia').value = paraCampo(config.mediaPadrao, 1); $('folhaMedia').hidden = false; }
+});
+
+iniciar();
+</script>
