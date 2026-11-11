@@ -305,6 +305,7 @@ function calcular(regs, mediaPadrao, reservaPct){
     } else {
       t.km = t.kmLeitura;
       t.custoKm = t.preco / mediaRef;
+      if (t.km > 0 && t.km * t.custoKm > t.abast.valor) t.custoKm = t.abast.valor / t.km;   // a gasolina gasta não passa do que foi pago
       t.gasto = Math.min(t.abast.valor, t.km * t.custoKm);
       t.restoL = Math.max(0, t.abast.litros - t.km / mediaRef);
       t.restoKm = t.restoL * mediaRef;
@@ -312,13 +313,12 @@ function calcular(regs, mediaPadrao, reservaPct){
     t.kmFora = Math.max(0, (t.km || 0) - t.kmParc);     // uso particular (entre parciais e depois da última)
     t.lucro = t.ganho - t.abast.valor - t.lanche;          // o tanque inteiro que você pagou entra na conta
     t.lucroUsado = t.ganho - t.gasto - t.lanche;           // só a gasolina já gasta (para o tanque em uso)
-    t.gasolinaFora = t.custoKm != null ? t.kmFora * t.custoKm : 0;
-    t.lucroTrabalho = t.lucro + (t.fechado ? t.gasolinaFora : 0);
-    t.reserva = t.lucro > 0 ? t.lucro * (reservaPct || 0) / 100 : 0;
-    t.livre = t.lucro - t.reserva;
-    t.porHora = t.horas > 0 ? t.lucro / t.horas : null;
-    t.lucroUber = t.ganho > 0 ? t.lucro * t.uber / t.ganho : 0;   // gasolina e lanche divididos na proporção do ganho
-    t.lucro99 = t.ganho > 0 ? t.lucro * t.n99 / t.ganho : 0;
+    t.gasolinaFora = t.custoKm != null ? t.kmFora * t.custoKm : 0;      // gasolina da família
+    t.gasTrab = t.custoKm != null ? t.kmParc * t.custoKm : 0;            // gasolina só dos km das parciais
+    t.lucroTrabalho = t.ganho - t.gasTrab - t.lanche;                    // o que a Uber e a 99 renderam de verdade
+    t.reserva = t.lucroTrabalho > 0 ? t.lucroTrabalho * (reservaPct || 0) / 100 : 0;
+    t.livre = t.lucroTrabalho - t.reserva;
+    t.porHora = t.horas > 0 ? t.lucroTrabalho / t.horas : null;
     for (const d of t.dias){
       d.custo = d.rodou != null && t.custoKm != null ? d.rodou * t.custoKm : null;
       d.lucro = d.custo != null ? d.ganho - d.custo - d.lanche : null;
@@ -484,7 +484,7 @@ const linha = (rot, val, cls, sub) => '<div class="linha' + (cls ? ' ' + cls : '
 function relatorio(t, c, pct, n){
   const a = t.abast;
   let h = '<div class="card rel"><div class="tanque-top"><span><span class="t">Tanque ' + n + ' · ' + dataBR(a.data) + (t.fechado ? ' a ' + dataBR(t.fim.data) : '') + '</span> ' +
-    (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</b></div>';
+    (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</b></div>';
   h += '<h4>⛽ Abastecimento</h4>' + linha(R$(a.valor) + ' de gasolina', n1(a.litros) + ' L', '', R$(t.preco) + ' o litro' + (a.hora ? ' · às ' + esc(a.hora) : '') + ' · <button class="link" data-editar="' + esc(a.id) + '">corrigir</button>');
   h += '<h4>🚗 Parciais (' + t.dias.length + ')</h4>';
   if (!t.dias.length) h += '<p class="s" style="margin:0 0 8px">Nenhuma parcial ainda. Toque em Iniciar parcial quando sair para rodar.</p>';
@@ -498,33 +498,37 @@ function relatorio(t, c, pct, n){
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
       (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') + '</button>';
   });
-  h += '<h4>🧮 Conta do tanque</h4>' +
+  const kmTxt = n0(t.kmParc) + ' km nas parciais' + (t.fechado ? '' : ' · estimado até abastecer');
+  h += '<h4>🧮 Conta do trabalho (Uber + 99)</h4>' +
     linha(U + ' Ganhos', R$(t.uber)) + linha(N + ' Ganhos', R$(t.n99)) +
     linha('Total ganho', R$(t.ganho), 'total') +
-    linha('⛽ Gasolina que você pôs', '<span class="neg">' + R$(-a.valor) + '</span>') +
-    (t.lanche ? linha('🍔 Lanche e outros gastos', '<span class="neg">' + R$(-t.lanche) + '</span>') : '') +
-    linha('Lucro do tanque', '<span class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</span>', 'total') +
-    (t.fechado && t.kmFora > 0 && t.custoKm != null ? linha('Lucro só do trabalho', '<span class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', '', 'sem os ' + n0(t.kmFora) + ' km particulares (' + R$(t.gasolinaFora) + ' de gasolina)') : '') +
-    (pct > 0 && t.lucro > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '') +
+    linha('⛽ Gasolina do trabalho', '<span class="neg">' + R$(-t.gasTrab) + '</span>', '', kmTxt) +
+    (t.lanche ? linha('🍔 Lanches e outros gastos', '<span class="neg">' + R$(-t.lanche) + '</span>') : '') +
+    linha('Lucro do trabalho', '<span class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', 'total') +
+    (pct > 0 && t.lucroTrabalho > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '') +
     (t.ganho > 0 ? '<h4>📱 Lucro por aplicativo</h4>' + [[U, t.uber], [N, t.n99]].filter(x => x[1] > 0).map(([m, g]) => {
-      const f = g / t.ganho, gas = a.valor * f, lan = t.lanche * f, lu = g - gas - lan;
+      const f = g / t.ganho, gas = t.gasTrab * f, lan = t.lanche * f, lu = g - gas - lan;
       return linha(m + ' Lucro', '<span class="' + cor(lu) + '">' + R$(lu) + '</span>', '', 'ganho ' + R$(g) + ' − gasolina ' + R$(gas) + (lan ? ' − lanche ' + R$(lan) : '') + ' · ' + n0(f * 100) + '% do ganho');
-    }).join('') + '<p class="s" style="margin:6px 0 0">A gasolina e o lanche são divididos na proporção do que cada aplicativo rendeu.</p>' : '');
+    }).join('') + '<p class="s" style="margin:6px 0 0">A gasolina do trabalho e os lanches são divididos na proporção do que cada aplicativo rendeu.</p>' : '');
+  h += '<h4>⛽ Conta do tanque inteiro</h4>' +
+    linha('Gasolina que você pôs', R$(a.valor), '', n1(a.litros) + ' L') +
+    linha('🚗 Usada no trabalho', R$(t.gasTrab), '', n0(t.kmParc) + ' km') +
+    (t.kmFora > 0 ? linha('🏠 Usada com a família / particular', R$(t.gasolinaFora), '', n0(t.kmFora) + ' km · não entra no lucro da Uber e da 99') : '') +
+    (t.fechado ? '' : linha('Ainda no tanque', R$(Math.max(0, a.valor - t.gasTrab - t.gasolinaFora)), '', 'cerca de ' + n1(t.restoL) + ' L (' + n0(t.restoKm) + ' km)')) +
+    linha('Saldo no bolso', '<span class="' + cor(t.lucro) + '">' + R$(t.lucro) + '</span>', 'total', 'ganhos − R$ ' + n1(a.valor).replace(',0', '') + ' do tanque inteiro' + (t.lanche ? ' − lanches' : ''));
   h += '<h4>📏 Rodagem</h4>' +
-    linha('Km rodados', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar' : 'pela última parcial') : 'hodômetro agora') + '') +
-    linha('🚗 Em parciais (trabalho)', n0(t.kmParc) + ' km') +
-    (t.kmFora > 0 ? linha('🏠 Uso particular', n0(t.kmFora) + ' km', '', t.custoKm != null ? 'cerca de ' + R$(t.gasolinaFora) + ' de gasolina' : '') : '') +
-    (t.fechado ? linha('Média do carro', t.media != null ? n1(t.media) + ' km/l' : '–', '', t.custoKm != null ? R$(t.custoKm) + ' de gasolina por km' : 'falta o km do tanque: corrija o abastecimento seguinte')
-      : linha('Média do carro', 'sai ao abastecer', '', 'estimando ' + n1(c.mediaRef) + ' km/l, restam cerca de ' + n1(t.restoL) + ' L (' + n0(t.restoKm) + ' km)')) +
-    linha('Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.horas > 0 ? R$(t.lucro / t.horas) + ' de lucro por hora' : '') +
-    (t.km > 0 ? linha('Ganho por km', R$(t.ganho / t.km), '', R$(t.lucro / t.km) + ' de lucro por km') : '');
+    linha('Km rodados no tanque', n0(t.km) + ' km', '', (t.fechado ? (t.kmDoPosto ? 'hodômetro antes de zerar' : 'pela última parcial') : 'hodômetro agora')) +
+    (t.fechado ? linha('Média do carro', t.media != null ? n1(t.media) + ' km/l' : '–', '', t.custoKm != null ? R$(t.custoKm) + ' de gasolina por km (conta trabalho e família)' : 'falta o km do tanque: corrija o abastecimento seguinte')
+      : linha('Média do carro', 'sai ao abastecer', '', 'por enquanto estimando ' + n1(c.mediaRef) + ' km/l')) +
+    linha('Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.horas > 0 ? R$(t.lucroTrabalho / t.horas) + ' de lucro por hora' : '') +
+    (t.kmParc > 0 ? linha('Ganho por km trabalhado', R$(t.ganho / t.kmParc), '', R$(t.lucroTrabalho / t.kmParc) + ' de lucro por km') : '');
   if (t.fechado){
-    h += t.lucro > 0 ? '<div class="veredito bom">Valeu a pena: sobraram ' + R$(t.lucro) + ' depois de pagar a gasolina' + (t.lanche ? ' e o lanche' : '') + '.' +
-        (t.horas > 0 ? '<small>Deu ' + R$(t.lucro / t.horas) + ' por hora trabalhada' + (t.kmFora > 0 && t.custoKm != null ? '; sem o uso particular, o trabalho rendeu ' + R$(t.lucroTrabalho) : '') + '.</small>' : '') + '</div>'
-      : '<div class="veredito ruim">Não valeu: faltaram ' + R$(-t.lucro) + ' para pagar a gasolina' + (t.lanche ? ' e o lanche' : '') + '.</div>';
+    h += t.lucroTrabalho > 0 ? '<div class="veredito bom">Valeu a pena: o trabalho rendeu ' + R$(t.lucroTrabalho) + ' de lucro.' +
+        '<small>' + (t.horas > 0 ? 'Deu ' + R$(t.lucroTrabalho / t.horas) + ' por hora. ' : '') + 'No bolso, depois de pagar o tanque inteiro' + (t.kmFora > 0 ? ' (inclusive os ' + n0(t.kmFora) + ' km da família)' : '') + ', ficaram ' + R$(t.lucro) + '.</small></div>'
+      : '<div class="veredito ruim">Não valeu: o trabalho deu ' + R$(t.lucroTrabalho) + ' depois da gasolina e dos lanches.</div>';
   } else {
-    h += '<div class="veredito ' + (t.lucro >= 0 ? 'bom' : 'neutro') + '">' + (t.lucro >= 0 ? 'O tanque já se pagou e sobram ' + R$(t.lucro) + '.' : 'Faltam ' + R$(-t.lucro) + ' para pagar o tanque' + (t.lanche ? ' e o lanche' : '') + '.') +
-      '<small>Contando só a gasolina já gasta (' + n0(t.km) + ' km, cerca de ' + R$(t.gasto) + '), o lucro até agora é ' + R$(t.lucroUsado) + '.</small></div>';
+    h += '<div class="veredito ' + (t.lucroTrabalho >= 0 ? 'bom' : 'neutro') + '">Até agora o trabalho rendeu ' + R$(t.lucroTrabalho) + ' de lucro.' +
+      '<small>' + (t.lucro >= 0 ? 'O tanque de ' + R$(a.valor) + ' já se pagou.' : 'Faltam ' + R$(-t.lucro) + ' para pagar o tanque de ' + R$(a.valor) + '.') + ' Quando abastecer de novo, este tanque fecha com a média real do carro.</small></div>';
   }
   return h + '</div>';
 }
@@ -548,13 +552,13 @@ function telaResumo(c, pct){
   }
   const a = atual.abast, cheio = a.litros > 0 ? Math.max(0, Math.min(100, atual.restoL / a.litros * 100)) : 0;
   h += '<div class="card hero"><div class="hero-in">' +
-    '<div class="lbl"><span>Saldo do tanque</span><span>' + R$(a.valor) + ' de gasolina em ' + dataBR(a.data) + '</span></div>' +
-    '<div class="big ' + cor(atual.lucro) + '">' + R$(atual.lucro) + '</div>' +
+    '<div class="lbl"><span>Lucro do trabalho</span><span>tanque de ' + R$(a.valor) + ' em ' + dataBR(a.data) + '</span></div>' +
+    '<div class="big ' + cor(atual.lucroTrabalho) + '">' + R$(atual.lucroTrabalho) + '</div>' +
     '<div class="trio"><div><span>' + U + '</span><b>' + R$(atual.uber) + '</b></div>' +
     '<div><span>' + N + '</span><b>' + R$(atual.n99) + '</b></div>' +
     '<div><span>🛣️ Rodados</span><b>' + n0(atual.km) + ' km</b></div></div>' +
     '<div class="meter"><i style="width:' + cheio.toFixed(0) + '%"></i></div>' +
-    '<p style="margin-top:0">Ganhos menos a gasolina que você pôs' + (atual.lanche ? ' e o lanche' : '') + '. Restam cerca de ' + n1(atual.restoL) + ' L no tanque.</p>' +
+    '<p style="margin-top:0">Ganhos menos a gasolina dos km trabalhados' + (atual.lanche ? ' e os lanches' : '') + '. Saldo no bolso, pagando o tanque inteiro: ' + R$(atual.lucro) + '. Restam cerca de ' + n1(atual.restoL) + ' L.</p>' +
     '</div></div>';
   const ab = parcialAberta();
   if (ab){
@@ -563,7 +567,7 @@ function telaResumo(c, pct){
       '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni != null ? ' · hodômetro em ' + n0(ab.kmIni) + ' km' : '') + '</span></span>' +
       '<button class="btn" data-novo="encerrar">Encerrar</button></div>';
   } else {
-    h += '<div class="grid2" style="margin-bottom:12px"><button class="btn" data-novo="iniciar">▶ Iniciar ' + (atual.dias.length + 1) + 'ª parcial</button><button class="btn ghost" data-novo="abast">⛽ Abastecer</button></div>';
+    h += '<div class="grid2" style="margin-bottom:12px"><button class="btn" data-novo="iniciar">▶ Iniciar ' + (atual.dias.length + 1) + 'ª parcial</button><button class="btn ghost" data-novo="abast">⛽ Abastecer e fechar tanque</button></div>';
   }
   h += relatorio(atual, c, pct, c.tanques.length);
   if (c.tanques.length > 1) h += '<button class="btn ghost full" data-tab="tanques">Ver relatórios dos tanques anteriores</button>';
