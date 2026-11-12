@@ -496,7 +496,9 @@ function relatorio(t, c, pct, n){
     h += '<button class="parc-row" data-editar="' + esc(d.id) + '"><span class="top"><span class="t">' + (i + 1) + 'ª · ' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
       '<b class="' + cor(v) + '">' + R$(v) + '</b></span>' +
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
-      (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') + '</button>';
+      (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') +
+      (d.lucro != null && d.ganho > 0 ? '<span class="s" style="display:block">Lucro do dia: ' + [[U, d.uber], [N, d.n99]].filter(x => x[1] > 0)
+        .map(([m, x]) => m + '<b class="' + cor(d.lucro * x / d.ganho) + '">' + R$(d.lucro * x / d.ganho) + '</b>').join(' &nbsp; ') + '</span>' : '') + '</button>';
   });
   const kmTxt = n0(t.kmParc) + ' km nas parciais' + (t.fechado ? '' : ' · estimado até abastecer');
   h += '<h4>🧮 Conta do trabalho (Uber + 99)</h4>' +
