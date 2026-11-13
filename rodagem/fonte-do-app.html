@@ -234,6 +234,30 @@ label.f .marca{margin-right:4px}
   </form>
 </div>
 
+<div class="fundo" id="folhaEvento" hidden>
+  <form class="folha" id="formEvento" autocomplete="off">
+    <h3>Adicionar evento</h3>
+    <label class="f">Link do post ou da página (Instagram, site…)<input id="eLink" type="url" inputmode="url" placeholder="https://www.instagram.com/p/..."></label>
+    <p class="s" style="margin:-6px 0 12px">No Instagram: toque em Compartilhar → Copiar link, e cole aqui.</p>
+    <label class="f">Nome do evento<input id="eNome" placeholder="ex.: Pagode do Ordi"></label>
+    <div class="grid2">
+      <label class="f">Data<input id="eData" type="date"></label>
+      <label class="f">Hora<input id="eHora" type="time"></label>
+    </div>
+    <label class="f">Local<input id="eLocal" placeholder="ex.: Ordinário Bar, SBS"></label>
+    <div class="grid2">
+      <label class="f">Região<input id="eRegiao" placeholder="ex.: Asa Sul"></label>
+      <label class="f">De onde veio<input id="eFonteNome" placeholder="ex.: Instagram @ordinariobar"></label>
+    </div>
+    <label class="f" style="display:flex;align-items:center;gap:10px;color:var(--text)"><input id="eGrande" type="checkbox" style="width:22px;height:22px;margin:0;flex:none"> Grande público (arena, show grande, muita gente)</label>
+    <p class="erro" id="eErro" hidden></p>
+    <div class="actions">
+      <button type="button" class="btn ghost" data-fechar>Cancelar</button>
+      <button type="submit" class="btn">Salvar evento</button>
+    </div>
+  </form>
+</div>
+
 <div class="fundo" id="folhaAjustes" hidden>
   <form class="folha" id="formAjustes" autocomplete="off">
     <h3>Ajustes</h3>
@@ -373,6 +397,8 @@ let mesVisto = hoje().slice(0, 7);
 let aba = 'resumo';
 let editando = null, modoParcial = 'completa';
 let agenda = null;               // eventos de Brasília (documento eventos/agenda)
+let meusEventos = [];            // eventos adicionados à mão (documentos eventos/u...)
+let colEventos = null, podeEditar = false;
 try { aba = localStorage.getItem('rodagem-aba') || 'resumo'; } catch (e) {}
 
 function salvarLocal(){ try { localStorage.setItem(LOCAL, JSON.stringify({regs: [...regs.entries()], config})); } catch (e) {} }
@@ -426,8 +452,15 @@ async function iniciar(){
     return;
   }
   try {
-    db.doc('eventos/agenda').onSnapshot(sn => { agenda = sn.exists ? sn.data() : {itens: []}; if (aba === 'eventos') render(); }, () => {});
+    colEventos = db.collection('eventos');
+    colEventos.onSnapshot(sn => {
+      const ag = sn.docs.find(d => d.id === 'agenda');
+      agenda = ag ? ag.data() : {itens: []};
+      meusEventos = sn.docs.filter(d => d.id !== 'agenda' && d.data() && d.data().nome).map(d => ({...d.data(), id: d.id, meu: true}));
+      if (aba === 'eventos') render();
+    }, () => {});
   } catch (e) {}
+  try { podeEditar = !!(user && await user.canEdit()); } catch (e) {}
   // Quem só pode ver o app (ex.: amigo com acesso de leitura) guarda os lançamentos no próprio aparelho.
   let pode = null; try { pode = await user.can('data.write'); } catch (e) {}
   if (pode === false){ modoLocal('Seus lançamentos ficam guardados neste aparelho. Para salvar na conta, peça ao dono do app acesso de Colaborador.'); return; }
@@ -660,8 +693,9 @@ function telaBares(){
 function telaEventos(){
   if (!agenda) return '<div class="card"><p class="empty">' + 'Carregando a agenda…' + '</p></div>';
   const hj = hoje(), am = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })();
-  const itens = (Array.isArray(agenda.itens) ? agenda.itens : []).filter(e => e && e.data && (e.ate || e.data) >= hj);
-  let h = '<p class="s" style="margin:4px 0 12px">Agenda de Brasília e região' + (agenda.atualizado ? ', atualizada em ' + dataBR(String(agenda.atualizado)) : '') + '. Datas e horários vêm de sites de agenda e ingressos: confirme antes de contar com o movimento.</p>';
+  const itens = [...(Array.isArray(agenda.itens) ? agenda.itens : []), ...meusEventos].filter(e => e && e.data && (e.ate || e.data) >= hj);
+  let h = (podeEditar && colEventos ? '<button class="btn full" data-novo-evento style="margin:4px 0 12px">+ Adicionar evento (cole o link do Instagram)</button>' : '') +
+    '<p class="s" style="margin:4px 0 12px">Agenda de Brasília e região' + (agenda.atualizado ? ', atualizada em ' + dataBR(String(agenda.atualizado)) : '') + '. Datas e horários vêm de sites de agenda e ingressos: confirme antes de contar com o movimento.</p>';
   if (!itens.length) return h + '<div class="card"><p class="empty">Nenhum evento da agenda daqui para a frente.<br>Peça ao Claude para atualizar a lista.</p></div>' + telaBares();
   const cartao = e => {
     const tags = [];
@@ -669,12 +703,14 @@ function telaEventos(){
     if (e.tipo) tags.push('<span class="tag">' + esc(e.tipo) + '</span>');
     if (e.regiao) tags.push('<span class="tag">📍 ' + esc(e.regiao) + '</span>');
     if (e.confirmar) tags.push('<span class="tag conf">confirmar data</span>');
+    if (e.meu) tags.push('<span class="tag">⭐ adicionado por você</span>');
+    const apagar = e.meu && podeEditar ? ' <button class="link" data-apagar-evento="' + esc(e.id) + '" style="margin-left:8px">apagar</button>' : '';
     const url = /^https:\/\//.test(e.fonte || '') ? e.fonte : '';
     const link = botaoFonte(e);
     return '<div class="ev"><span class="hora">' + (e.hora ? esc(e.hora) : '–') + '</span><span class="mid"><span class="t">' + esc(e.nome || '') + '</span>' +
       '<span class="s" style="display:block">' + esc(e.local || 'Local a confirmar') + (e.ate ? ' · até ' + dataBR(e.ate) : '') + '</span>' +
       (e.obs ? '<span class="s" style="display:block">' + esc(e.obs) + '</span>' : '') +
-      '<span style="display:block">' + tags.join('') + '</span>' + link + '</span></div>';
+      '<span style="display:block">' + tags.join('') + '</span>' + link + apagar + '</span></div>';
   };
   const emCartaz = itens.filter(e => e.ate && e.data < hj);
   const porDia = {};
@@ -699,7 +735,29 @@ function render(){
 setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.textContent = haQuanto(p); }, 30000);
 
 // ---------- folhas de lançamento ----------
-function fecharFolhas(){ for (const id of ['folhaMenu', 'folhaParcial', 'folhaAbast', 'folhaAjustes']) $(id).hidden = true; editando = null; }
+function fecharFolhas(){ for (const id of ['folhaMenu', 'folhaParcial', 'folhaAbast', 'folhaAjustes', 'folhaEvento']) $(id).hidden = true; editando = null; }
+function abrirEvento(){
+  fecharFolhas();
+  for (const id of ['eLink', 'eNome', 'eHora', 'eLocal', 'eRegiao', 'eFonteNome']) $(id).value = '';
+  $('eData').value = hoje(); $('eGrande').checked = false; $('eErro').hidden = true;
+  $('folhaEvento').hidden = false;
+}
+$('eLink').addEventListener('change', () => {   // sugere de onde veio a partir do link
+  const u = $('eLink').value.trim();
+  if (!$('eFonteNome').value && /^https:\/\//.test(u)) $('eFonteNome').value = nomeFonte(u);
+});
+$('formEvento').addEventListener('submit', e => {
+  e.preventDefault();
+  const el = $('eErro'), link = $('eLink').value.trim();
+  const ev = {nome: $('eNome').value.trim(), data: $('eData').value, hora: $('eHora').value, local: $('eLocal').value.trim(), regiao: $('eRegiao').value.trim(),
+    publico: $('eGrande').checked ? 'grande' : 'medio', fonteNome: $('eFonteNome').value.trim(), criado: Date.now()};
+  if (!ev.nome) return erro(el, 'Coloque o nome do evento.');
+  if (!ev.data) return erro(el, 'Coloque a data do evento.');
+  if (link && !/^https:\/\//.test(link)) return erro(el, 'O link precisa começar com https://');
+  if (link) ev.fonte = link;
+  for (const k of Object.keys(ev)) if (ev[k] === '') delete ev[k];
+  concluir(() => colEventos.doc(novoId('u')).set(ev), el, 'Evento adicionado');
+});
 function kmAtual(menos){   // leitura do hodômetro parcial no tanque em uso (0 logo depois de abastecer)
   const lista = [...regs.entries()].filter(([id]) => id !== menos).map(([id, r]) => ({...r, id}));
   const c = calcular(lista, config.mediaPadrao, 0);
@@ -852,9 +910,15 @@ for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['pExcluir', 'pErro']]){
 $('fab').addEventListener('click', abrirMenu);
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('fundo')) return fecharFolhas();
-  const t = e.target.closest('[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
+  const t = e.target.closest('[data-novo-evento],[data-apagar-evento],[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
   if (!t) return;
   if (t.hasAttribute('data-fechar')) return fecharFolhas();
+  if (t.hasAttribute('data-novo-evento')) return abrirEvento();
+  if (t.dataset.apagarEvento){
+    if (!t.dataset.certo){ t.dataset.certo = '1'; t.textContent = 'apagar mesmo?'; return; }
+    colEventos.doc(t.dataset.apagarEvento).delete().then(() => toast('Evento apagado'), () => toast('Não foi possível apagar agora. Tente de novo.'));
+    return;
+  }
   if (t.dataset.agora){ $(t.dataset.agora).value = agora(); if (t.dataset.agora === 'pHFim') fimMexido = false; previaParcial(); return; }
   if (t.dataset.tab){ aba = t.dataset.tab; try { localStorage.setItem('rodagem-aba', aba); } catch (er) {} render(); window.scrollTo(0, 0); return; }
   if (t.dataset.novo === 'abast') return abrirAbast();
