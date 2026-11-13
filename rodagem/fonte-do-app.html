@@ -184,10 +184,13 @@ label.f .marca{margin-right:4px}
 <div class="fundo" id="folhaParcial" hidden>
   <form class="folha" id="formParcial" autocomplete="off">
     <h3 id="tituloParcial">Parcial</h3>
+    <div class="preview" id="pIniResumo" hidden><span id="pIniTexto"></span> <button type="button" class="link" id="pIniCorrigir">corrigir</button></div>
+    <div id="pIni">
     <label class="f">Data<input id="pData" type="date" required></label>
     <div class="grid2">
       <label class="f">Começou às<span class="hora-linha"><input id="pHIni" type="time"><button type="button" class="agora" data-agora="pHIni">Agora</button></span></label>
       <label class="f">Hodômetro parcial na saída<input id="pKmIni" inputmode="numeric" placeholder="ex.: 120"></label>
+    </div>
     </div>
     <div id="pFim">
       <div class="grid2">
@@ -262,7 +265,9 @@ function calcular(regs, mediaPadrao, reservaPct){
   const dias = regs.filter(r => r.tipo === 'dia' && !r.aberta);
   // Tudo é ordenado por data e hora: o abastecimento separa um tanque do outro.
   const quando = r => r.data + ' ' + (r.tipo === 'abast' ? (r.hora || '00:00') : (r.hIni || r.hFim || '12:00'));
-  const ordem = (a, b) => quando(a) < quando(b) ? -1 : quando(a) > quando(b) ? 1 : (a.criado || 0) - (b.criado || 0);
+  const ordem = (a, b) => quando(a) < quando(b) ? -1 : quando(a) > quando(b) ? 1
+    : a.tipo !== b.tipo ? (a.tipo === 'abast' ? -1 : 1)          // mesmo horário: o abastecimento vem antes da parcial
+    : (a.criado || 0) - (b.criado || 0);
   const seq = [...abs, ...dias].sort(ordem);
   const tanques = [], soltos = [];
   let atual = null;
@@ -726,6 +731,10 @@ function abrirParcial(modo, id){
   $('tituloParcial').textContent = {iniciar: 'Iniciar parcial', encerrar: 'Encerrar parcial', completa: 'Parcial já terminada', editar: 'Corrigir parcial'}[m];
   $('pSalvar').textContent = m === 'iniciar' ? 'Começar' : 'Salvar';
   $('pFim').hidden = m === 'iniciar';
+  // Ao encerrar, o início já foi marcado: mostra só o resumo, com opção de corrigir.
+  const soResumo = m === 'encerrar' && r && r.aberta;
+  $('pIni').hidden = !!soResumo; $('pIniResumo').hidden = !soResumo;
+  if (soResumo) $('pIniTexto').textContent = 'Começou ' + (r.data !== hoje() ? 'em ' + dataBR(r.data) + ' ' : '') + 'às ' + (r.hIni || '–') + ' com o hodômetro em ' + n0(r.kmIni || 0) + ' km.';
   $('pData').value = r ? r.data : hoje();
   $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? agora() : '');
   $('pKmIni').value = r ? (r.kmIni != null ? r.kmIni : '') : kmAtual();
@@ -767,6 +776,7 @@ function previaParcial(){
   }
   $('pPrev').textContent = partes.join(' '); $('pPrev').hidden = !partes.length;
 }
+$('pIniCorrigir').addEventListener('click', () => { $('pIni').hidden = false; $('pIniResumo').hidden = true; });
 $('formParcial').addEventListener('input', e => { if (e.target.id === 'pHFim') fimMexido = true; previaParcial(); });
 $('formParcial').addEventListener('submit', e => {
   e.preventDefault();
