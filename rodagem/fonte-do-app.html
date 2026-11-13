@@ -707,6 +707,11 @@ function kmAtual(menos){   // leitura do hodômetro parcial no tanque em uso (0 
   if (t) return t.kmLeitura;
   let k = 0; for (const d of c.soltos) if (d.km > k) k = d.km; return k;
 }
+function tanqueEmUso(){
+  const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
+  const c = calcular(lista, config.mediaPadrao, 0);
+  return c.tanques[c.tanques.length - 1] || null;
+}
 const lerKmOpc = txt => /\d/.test(String(txt || '')) ? lerKm(txt) : null;
 function armarExcluir(btn){ btn.dataset.certo = ''; btn.textContent = 'Excluir'; }
 function erro(el, txt){ el.textContent = txt; el.hidden = false; }
@@ -736,7 +741,10 @@ function abrirParcial(modo, id){
   $('pIni').hidden = !!soResumo; $('pIniResumo').hidden = !soResumo;
   if (soResumo) $('pIniTexto').textContent = 'Começou ' + (r.data !== hoje() ? 'em ' + dataBR(r.data) + ' ' : '') + 'às ' + (r.hIni || '–') + ' com o hodômetro em ' + n0(r.kmIni || 0) + ' km.';
   $('pData').value = r ? r.data : hoje();
-  $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? agora() : '');
+  // 1ª parcial do tanque, no dia do abastecimento: começa na hora em que abasteceu. Das outras em diante, na hora de agora.
+  const tq = r ? null : tanqueEmUso();
+  const horaAbast = tq && !tq.dias.length && tq.abast.data === hoje() && tq.abast.hora ? tq.abast.hora : '';
+  $('pHIni').value = r ? r.hIni || '' : (m === 'iniciar' ? (horaAbast || agora()) : (m === 'completa' ? horaAbast : ''));
   $('pKmIni').value = r ? (r.kmIni != null ? r.kmIni : '') : kmAtual();
   $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' || m === 'completa' ? agora() : '');
   fimMexido = !!(r && !r.aberta);
