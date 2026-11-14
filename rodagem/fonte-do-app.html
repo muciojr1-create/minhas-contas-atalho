@@ -140,6 +140,9 @@ label.f{display:block;margin-bottom:12px;font-size:13px;color:var(--muted);font-
 label.f input{display:block;width:100%;min-width:0;margin-top:5px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;font-weight:400;color:var(--text)}
 label.f .marca{margin-right:4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:12px;border:1px solid var(--line);gap:4px}
+.seg button{flex:1;border:none;background:none;padding:9px 4px;border-radius:9px;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--text);font-weight:700;box-shadow:var(--shadow)}
 .hora-linha{display:flex;gap:6px;align-items:stretch;margin-top:5px}
 .hora-linha input{margin-top:0!important;flex:1;min-width:0}
 .agora{border:1px solid var(--line);background:var(--primary-soft);color:var(--primary-text);border-radius:12px;padding:0 10px;font-weight:700;font-size:13px;flex:none}
@@ -197,10 +200,15 @@ label.f .marca{margin-right:4px}
         <label class="f">Terminou às<span class="hora-linha"><input id="pHFim" type="time"><button type="button" class="agora" data-agora="pHFim">Agora</button></span></label>
         <label class="f">Hodômetro parcial ao parar<input id="pKm" inputmode="numeric" placeholder="ex.: 100"></label>
       </div>
-      <div class="grid2">
-        <label class="f"><span class="marca u">Uber</span>Ganho (R$)<input id="pUber" inputmode="decimal" placeholder="0,00"></label>
-        <label class="f"><span class="marca n">99</span>Ganho (R$)<input id="p99" inputmode="decimal" placeholder="0,00"></label>
+      <div class="seg" id="pModoGanho">
+        <button type="button" data-modo-ganho="total">Total do dia no app</button>
+        <button type="button" data-modo-ganho="saida">Só desta saída</button>
       </div>
+      <div class="grid2">
+        <label class="f"><span class="marca u">Uber</span><span id="lblUber">Ganho (R$)</span><input id="pUber" inputmode="decimal" placeholder="0,00"></label>
+        <label class="f"><span class="marca n">99</span><span id="lbl99">Ganho (R$)</span><input id="p99" inputmode="decimal" placeholder="0,00"></label>
+      </div>
+      <p class="s" id="pAntes" style="margin:-6px 0 12px" hidden></p>
       <label class="f">🍔 Lanche e outros gastos (R$)<input id="pLanche" inputmode="decimal" placeholder="0,00"></label>
     </div>
     <div class="preview" id="pPrev" hidden></div>
@@ -807,8 +815,12 @@ function abrirParcial(modo, id){
   $('pHFim').value = r && !r.aberta ? r.hFim || '' : (m === 'encerrar' || m === 'completa' ? agora() : '');
   fimMexido = !!(r && !r.aberta);
   $('pKm').value = r && r.km ? r.km : '';
-  $('pUber').value = r ? paraCampo(r.uber, 2) : '';
-  $('p99').value = r ? paraCampo(r.n99, 2) : '';
+  const tot = modoGanho === 'total';
+  $('pUber').value = r ? paraCampo(tot && r.uberTotal != null ? r.uberTotal : (tot ? (r.uber || 0) + ganhosAntes(r.data, editando).uber : r.uber), 2) : '';
+  $('p99').value = r ? paraCampo(tot && r.n99Total != null ? r.n99Total : (tot ? (r.n99 || 0) + ganhosAntes(r.data, editando).n99 : r.n99), 2) : '';
+  if (r && !r.uber && !r.uberTotal) $('pUber').value = '';
+  if (r && !r.n99 && !r.n99Total) $('p99').value = '';
+  mostrarModoGanho();
   $('pLanche').value = r ? paraCampo(r.lanche, 2) : '';
   $('pErro').hidden = true; $('pExcluir').hidden = !r; armarExcluir($('pExcluir'));
   previaParcial(); $('folhaParcial').hidden = false;
@@ -819,9 +831,37 @@ setInterval(() => {
   if (document.activeElement === $('pHFim')) return;
   const h = agora(); if ($('pHFim').value !== h){ $('pHFim').value = h; previaParcial(); }
 }, 20000);
+// Ganhos: o app da Uber e o da 99 mostram o total do dia. No modo "total", o Rodagem desconta o que as parciais
+// anteriores do mesmo dia já lançaram e guarda só o que entrou nesta saída.
+let modoGanho = 'total';
+try { modoGanho = localStorage.getItem('rodagem-modo-ganho') || 'total'; } catch (e) {}
+function ganhosAntes(data, menos){
+  let uber = 0, n99 = 0;
+  for (const [id, r] of regs) if (id !== menos && r.tipo === 'dia' && !r.aberta && r.data === data){ uber += r.uber || 0; n99 += r.n99 || 0; }
+  return {uber, n99};
+}
+function mostrarModoGanho(){
+  for (const b of document.querySelectorAll('[data-modo-ganho]')) b.classList.toggle('on', b.dataset.modoGanho === modoGanho);
+  const tot = modoGanho === 'total';
+  $('lblUber').textContent = tot ? 'Total do dia (R$)' : 'Ganho nesta saída (R$)';
+  $('lbl99').textContent = tot ? 'Total do dia (R$)' : 'Ganho nesta saída (R$)';
+  const a = ganhosAntes($('pData').value || hoje(), editando);
+  $('pAntes').hidden = !tot;
+  $('pAntes').textContent = a.uber || a.n99 ? 'Já lançado hoje nas parciais anteriores: Uber ' + R$(a.uber) + ' · 99 ' + R$(a.n99) + '. Digite o total que aparece no app; eu desconto isso.'
+    : 'Primeira parcial do dia: o total do app é o ganho desta saída.';
+}
 function lerParcial(){
-  return {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKmOpc($('pKmIni').value), hFim: $('pHFim').value,
+  const d = {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKmOpc($('pKmIni').value), hFim: $('pHFim').value,
     km: lerKm($('pKm').value), uber: lerValor($('pUber').value), n99: lerValor($('p99').value), lanche: lerValor($('pLanche').value)};
+  if (modoGanho === 'total'){
+    const a = ganhosAntes(d.data || hoje(), editando), tu = d.uber, t9 = d.n99;
+    d.erroTotal = (tu > 0 && tu < a.uber - 0.005) ? 'Uber' : (t9 > 0 && t9 < a.n99 - 0.005) ? '99' : '';
+    d.uber = tu > 0 ? Math.max(0, +(tu - a.uber).toFixed(2)) : 0;
+    d.n99 = t9 > 0 ? Math.max(0, +(t9 - a.n99).toFixed(2)) : 0;
+    if (tu > 0) d.uberTotal = tu;
+    if (t9 > 0) d.n99Total = t9;
+  }
+  return d;
 }
 function previaParcial(){
   const d = lerParcial(), partes = [];
@@ -834,6 +874,7 @@ function previaParcial(){
     const k0 = kmAtual(editando);
     if (!editando && d.kmIni != null && d.kmIni > k0) partes.push(n0(d.kmIni - k0) + ' km de uso particular antes desta saída.');
     if (d.kmIni != null && d.km > 0) partes.push(d.km >= d.kmIni ? 'Rodou ' + n0(d.km - d.kmIni) + ' km.' : 'O km final está menor que o da saída, confira.');
+    if (modoGanho === 'total' && (d.uberTotal || d.n99Total)) partes.push('Nesta saída: Uber ' + R$(d.uber) + ' · 99 ' + R$(d.n99) + '.');
     const h = horasDe(d);
     if (h > 0) partes.push('Trabalhou ' + hm(h) + '.');
     const g = d.uber + d.n99;
@@ -843,6 +884,17 @@ function previaParcial(){
   $('pPrev').textContent = partes.join(' '); $('pPrev').hidden = !partes.length;
 }
 $('pIniCorrigir').addEventListener('click', () => { $('pIni').hidden = false; $('pIniResumo').hidden = true; });
+$('pModoGanho').addEventListener('click', e => {
+  const b = e.target.closest('[data-modo-ganho]'); if (!b || b.dataset.modoGanho === modoGanho) return;
+  // troca o que está nos campos para o outro modo, para não perder o que foi digitado
+  const a = ganhosAntes($('pData').value || hoje(), editando), u = lerValor($('pUber').value), n = lerValor($('p99').value);
+  const sinal = b.dataset.modoGanho === 'total' ? 1 : -1;
+  if (u > 0) $('pUber').value = paraCampo(Math.max(0, u + sinal * a.uber), 2);
+  if (n > 0) $('p99').value = paraCampo(Math.max(0, n + sinal * a.n99), 2);
+  modoGanho = b.dataset.modoGanho;
+  try { localStorage.setItem('rodagem-modo-ganho', modoGanho); } catch (er) {}
+  mostrarModoGanho(); previaParcial();
+});
 $('formParcial').addEventListener('input', e => { if (e.target.id === 'pHFim') fimMexido = true; previaParcial(); });
 $('formParcial').addEventListener('submit', e => {
   e.preventDefault();
@@ -855,7 +907,12 @@ $('formParcial').addEventListener('submit', e => {
     const novo = {tipo: 'dia', aberta: true, data: d.data, hIni: d.hIni, kmIni: d.kmIni, criado: d.criado};
     return concluir(() => gravar(editando || novoId('d'), novo), el, 'Parcial iniciada. Boa rodagem!');
   }
-  if (!(d.uber > 0) && !(d.n99 > 0) && !(d.km > 0)) return erro(el, 'Informe o km final ou o ganho na Uber ou na 99.');
+  if (d.erroTotal){
+    const a = ganhosAntes(d.data, editando);
+    return erro(el, 'O total da ' + d.erroTotal + ' está menor do que já foi lançado hoje (' + R$(d.erroTotal === 'Uber' ? a.uber : a.n99) + '). Confira o valor, ou toque em "Só desta saída" se digitou só o desta saída.');
+  }
+  delete d.erroTotal;
+  if (!(d.uber > 0) && !(d.n99 > 0) && !(d.km > 0) && !d.uberTotal && !d.n99Total) return erro(el, 'Informe o km final ou o ganho na Uber ou na 99.');
   if (d.kmIni != null && d.km > 0 && d.km < d.kmIni) return erro(el, 'O hodômetro ao parar não pode ser menor que o da saída. Se abasteceu no meio, lance o abastecimento antes.');
   concluir(() => gravar(editando || novoId('d'), d), el, 'Parcial salva');
 });
