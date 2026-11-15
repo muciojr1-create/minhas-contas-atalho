@@ -836,8 +836,18 @@ setInterval(() => {
 let modoGanho = 'total';
 try { modoGanho = localStorage.getItem('rodagem-modo-ganho') || 'total'; } catch (e) {}
 function ganhosAntes(data, menos){
+  // Só conta parciais do mesmo dia e do MESMO TANQUE: um abastecimento novo começa a conta do zero.
+  const hIni = $('pHIni').value || '23:59', estaParcial = data + ' ' + hIni;
+  let inicioTanque = '';
+  for (const r of regs.values()) if (r.tipo === 'abast'){
+    const k = r.data + ' ' + (r.hora || '00:00');
+    if (k <= estaParcial && k > inicioTanque) inicioTanque = k;
+  }
   let uber = 0, n99 = 0;
-  for (const [id, r] of regs) if (id !== menos && r.tipo === 'dia' && !r.aberta && r.data === data){ uber += r.uber || 0; n99 += r.n99 || 0; }
+  for (const [id, r] of regs) if (id !== menos && r.tipo === 'dia' && !r.aberta && r.data === data){
+    const k = r.data + ' ' + (r.hIni || r.hFim || '12:00');
+    if (k >= inicioTanque && k < estaParcial){ uber += r.uber || 0; n99 += r.n99 || 0; }
+  }
   return {uber, n99};
 }
 function mostrarModoGanho(){
@@ -847,8 +857,8 @@ function mostrarModoGanho(){
   $('lbl99').textContent = tot ? 'Total do dia (R$)' : 'Ganho nesta saída (R$)';
   const a = ganhosAntes($('pData').value || hoje(), editando);
   $('pAntes').hidden = !tot;
-  $('pAntes').textContent = a.uber || a.n99 ? 'Já lançado hoje nas parciais anteriores: Uber ' + R$(a.uber) + ' · 99 ' + R$(a.n99) + '. Digite o total que aparece no app; eu desconto isso.'
-    : 'Primeira parcial do dia: o total do app é o ganho desta saída.';
+  $('pAntes').textContent = a.uber || a.n99 ? 'Já lançado hoje nas parciais anteriores deste tanque: Uber ' + R$(a.uber) + ' · 99 ' + R$(a.n99) + '. Digite o total que aparece no app; eu desconto isso.'
+    : 'Primeira parcial do dia neste tanque: o valor que você digitar é o ganho desta saída.';
 }
 function lerParcial(){
   const d = {tipo: 'dia', data: $('pData').value, hIni: $('pHIni').value, kmIni: lerKmOpc($('pKmIni').value), hFim: $('pHFim').value,
