@@ -10,15 +10,19 @@
   --hero:#1b2430; --hero-fg:#f3f5f8; --hero-ok:#4ade80; --hero-bad:#fca5a5;
   --uber:#000000; --uber-fg:#ffffff; --n99:#ffd500; --n99-fg:#1a1a1a;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.04); --shade:rgba(0,0,0,.45); --radius:16px;
+  --c1:#fdf3d8; --c1b:#f1d98f; --c2:#e3eefc; --c2b:#b3cdf0; --c3:#e2f4e8; --c3b:#a9d8b8;
+  --c4:#efe7fa; --c4b:#cbb7ea; --c5:#ddf2f2; --c5b:#a3d4d4; --c6:#fbe6ea; --c6b:#ebb4bf;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
   --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
-  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65); color-scheme:dark } }
+  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65);
+  --c1:#3a3018; --c1b:#5c4b1f; --c2:#1b2a40; --c2b:#2f4766; --c3:#18321f; --c3b:#2b5236; --c4:#2a2140; --c4b:#45366a; --c5:#173233; --c5b:#295456; --c6:#3a1d24; --c6b:#5e2f3a; color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
   --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
-  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65); color-scheme:dark }
+  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65);
+  --c1:#3a3018; --c1b:#5c4b1f; --c2:#1b2a40; --c2b:#2f4766; --c3:#18321f; --c3b:#2b5236; --c4:#2a2140; --c4b:#45366a; --c5:#173233; --c5b:#295456; --c6:#3a1d24; --c6b:#5e2f3a; color-scheme:dark }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
@@ -115,6 +119,24 @@ a.fonte-btn:active{opacity:.7}
 .tag.grande{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
 .tag.conf{background:var(--danger-soft);color:var(--danger);border-color:transparent}
 .diaev{display:flex;align-items:baseline;gap:8px}
+.rel{padding:0;overflow:hidden;border-color:var(--tint-borda)}
+.rel-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px 10px;background:var(--tint-fundo)}
+.rel-num{font-size:18px;font-weight:800;margin-right:8px}
+.rel-per{display:block;font-size:13.5px;color:var(--muted);margin-top:3px;font-weight:600}
+.rel-lucro{font-size:21px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rel-lucro small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.rel-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px 12px;background:var(--tint-fundo)}
+.rel-resumo div{background:var(--card);border-radius:10px;padding:7px 8px;min-width:0}
+.rel-resumo span{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.rel-resumo b{font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rel-in{padding:12px 16px 14px}
+.rel-in .veredito{margin-top:0}
+details.rel-det summary{margin-top:12px;padding:11px 12px;border-radius:12px;background:var(--tint-fundo);color:var(--text);font-weight:700;list-style:none;text-align:center}
+details.rel-det summary::-webkit-details-marker{display:none}
+details.rel-det summary::after{content:" ▾"}
+details.rel-det[open] summary::after{content:" ▴"}
+.tint1{--tint-fundo:var(--c1);--tint-borda:var(--c1b)} .tint2{--tint-fundo:var(--c2);--tint-borda:var(--c2b)} .tint3{--tint-fundo:var(--c3);--tint-borda:var(--c3b)}
+.tint4{--tint-fundo:var(--c4);--tint-borda:var(--c4b)} .tint5{--tint-fundo:var(--c5);--tint-borda:var(--c5b)} .tint6{--tint-fundo:var(--c6);--tint-borda:var(--c6b)}
 .rel h4{margin:14px 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .rel h4:first-of-type{margin-top:4px}
 .parc-row{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
@@ -527,10 +549,19 @@ function listaParciais(dias){
 }
 const linha = (rot, val, cls, sub) => '<div class="linha' + (cls ? ' ' + cls : '') + '"><span>' + rot + (sub ? '<small>' + sub + '</small>' : '') + '</span><b>' + val + '</b></div>';
 
-function relatorio(t, c, pct, n){
+function relatorio(t, c, pct, n, aberto){
   const a = t.abast;
-  let h = '<div class="card rel"><div class="tanque-top"><span><span class="t">Tanque ' + n + ' · ' + dataBR(a.data) + (t.fechado ? ' a ' + dataBR(t.fim.data) : '') + '</span> ' +
-    (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '</span><b class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</b></div>';
+  const periodo = t.fechado ? 'de ' + dataBR(a.data, true) + ' a ' + dataBR(t.fim.data, true) : 'desde ' + dataBR(a.data, true);
+  const cab = '<div class="card rel tint' + ((n - 1) % 6 + 1) + '"><div class="rel-cab"><div><span class="rel-num">Tanque ' + n + '</span>' +
+    (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '<span class="rel-per">' + periodo + '</span></div>' +
+    '<b class="rel-lucro ' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '<small>lucro do trabalho</small></b></div>' +
+    '<div class="rel-resumo">' +
+      '<div><span>Parciais</span><b>' + t.dias.length + '</b></div>' +
+      '<div><span>Km rodados</span><b>' + n0(t.km) + '</b></div>' +
+      '<div><span>Média</span><b>' + (t.fechado && t.media != null ? n1(t.media) + ' km/l' : '—') + '</b></div>' +
+      '<div><span>Gasolina</span><b>' + R$(a.valor) + '</b></div>' +
+    '</div><div class="rel-in">';
+  let h = '';
   h += '<h4>⛽ Abastecimento</h4>' + linha(R$(a.valor) + ' de gasolina', n1(a.litros) + ' L', '', R$(t.preco) + ' o litro' + (a.hora ? ' · às ' + esc(a.hora) : '') + ' · <button class="link" data-editar="' + esc(a.id) + '">corrigir</button>');
   h += '<h4>🚗 Parciais (' + t.dias.length + ')</h4>';
   if (!t.dias.length) h += '<p class="s" style="margin:0 0 8px">Nenhuma parcial ainda. Toque em Iniciar parcial quando sair para rodar.</p>';
@@ -570,6 +601,7 @@ function relatorio(t, c, pct, n){
       : linha('Média do carro', 'sai ao abastecer', '', 'por enquanto estimando ' + n1(c.mediaRef) + ' km/l')) +
     linha('Horas trabalhadas', t.horas > 0 ? hm(t.horas) : '–', '', t.horas > 0 ? R$(t.lucroTrabalho / t.horas) + ' de lucro por hora' : '') +
     (t.kmParc > 0 ? linha('Ganho por km trabalhado', R$(t.ganho / t.kmParc), '', R$(t.lucroTrabalho / t.kmParc) + ' de lucro por km') : '');
+  const det = h; h = '';
   if (t.fechado){
     h += t.lucroTrabalho > 0 ? '<div class="veredito bom">Valeu a pena: o trabalho rendeu ' + R$(t.lucroTrabalho) + ' de lucro.' +
         '<small>' + (t.horas > 0 ? 'Deu ' + R$(t.lucroTrabalho / t.horas) + ' por hora. ' : '') + 'No bolso, depois de pagar o tanque inteiro' + (t.kmFora > 0 ? ' (inclusive os ' + n0(t.kmFora) + ' km da família)' : '') + ', ficaram ' + R$(t.lucro) + '.</small></div>'
@@ -578,7 +610,7 @@ function relatorio(t, c, pct, n){
     h += '<div class="veredito ' + (t.lucroTrabalho >= 0 ? 'bom' : 'neutro') + '">Até agora o trabalho rendeu ' + R$(t.lucroTrabalho) + ' de lucro.' +
       '<small>' + (t.lucro >= 0 ? 'O tanque de ' + R$(a.valor) + ' já se pagou.' : 'Faltam ' + R$(-t.lucro) + ' para pagar o tanque de ' + R$(a.valor) + '.') + ' Quando abastecer de novo, este tanque fecha com a média real do carro.</small></div>';
   }
-  return h + '</div>';
+  return cab + h + '<details class="rel-det"' + (aberto ? ' open' : '') + '><summary>Ver parciais e contas deste tanque</summary>' + det + '</details></div></div>';
 }
 
 function cartaoInstalar(){
@@ -617,7 +649,7 @@ function telaResumo(c, pct){
   } else {
     h += '<div class="grid2" style="margin-bottom:12px"><button class="btn" data-novo="iniciar">▶ Iniciar ' + (atual.dias.length + 1) + 'ª parcial</button><button class="btn ghost" data-novo="abast">⛽ Abastecer e fechar tanque</button></div>';
   }
-  h += relatorio(atual, c, pct, c.tanques.length);
+  h += relatorio(atual, c, pct, c.tanques.length, true);
   if (c.tanques.length > 1) h += '<button class="btn ghost full" data-tab="tanques">Ver relatórios dos tanques anteriores</button>';
   return h + cartaoInstalar();
 }
@@ -625,7 +657,7 @@ function telaResumo(c, pct){
 function telaTanques(c, pct){
   if (!c.tanques.length) return '<div class="card"><p class="empty">Nenhum abastecimento lançado.<br>Toque no + e escolha Abastecimento.</p></div>';
   let h = c.mediaGeral ? '<h2 style="margin-top:6px">Média geral do carro<span>' + n1(c.mediaGeral) + ' km/l</span></h2>' : '<h2 style="margin-top:6px">Relatórios dos tanques</h2>';
-  for (let i = c.tanques.length - 1; i >= 0; i--) h += relatorio(c.tanques[i], c, pct, i + 1);
+  for (let i = c.tanques.length - 1; i >= 0; i--) h += relatorio(c.tanques[i], c, pct, i + 1, false);
   return h;
 }
 
