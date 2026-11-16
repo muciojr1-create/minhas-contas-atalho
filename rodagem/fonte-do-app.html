@@ -118,6 +118,8 @@ a.fonte-btn:active{opacity:.7}
 .rel-lucro{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .rel-lucro .etq{display:inline-block;font-size:20px;font-weight:800;color:#fff;background:#15803d;border-radius:10px;padding:4px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
 .rel-lucro.neg .etq{background:#dc2626}
+.etq-sm{display:inline-block;color:#fff!important;background:#15803d;border-radius:8px;padding:2px 8px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.etq-sm.neg{background:#dc2626}
 .rel-lucro small{display:block;font-size:11px;font-weight:700;color:#374151;margin-top:3px}
 .rel-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px 12px;background:var(--tint-fundo)}
 .rel-resumo div{background:var(--card);border-radius:10px;padding:7px 8px;min-width:0}
@@ -572,11 +574,11 @@ function relatorio(t, c, pct, n, aberto){
       '<span style="display:block"><button class="alterar" data-editar="' + esc(d.id) + '">✏️ Alterar passeio</button></span>' +
       '<span style="display:block;font-size:12px;margin-top:4px">Muda o hodômetro de saída da ' + (i + 1) + 'ª parcial.</span></div>';
     h += '<button class="parc-row pc' + ((n + i) % 6 + 1) + '" data-editar="' + esc(d.id) + '"><span class="top"><span class="t"><span class="pnum">' + (i + 1) + 'ª</span>' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
-      '<b class="' + cor(v) + '">' + R$(v) + '</b></span>' +
+      '<b class="etq-sm ' + cor(v) + '">' + R$(v) + '</b></span>' +
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
       (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') +
       (d.lucro != null && d.ganho > 0 ? '<span class="s" style="display:block">Lucro do dia: ' + [[U, d.uber], [N, d.n99]].filter(x => x[1] > 0)
-        .map(([m, x]) => m + '<b class="' + cor(d.lucro * x / d.ganho) + '">' + R$(d.lucro * x / d.ganho) + '</b>').join(' &nbsp; ') + '</span>' : '') +
+        .map(([m, x]) => m + '<b class="etq-sm ' + cor(d.lucro * x / d.ganho) + '" style="font-size:12.5px;padding:1px 6px">' + R$(d.lucro * x / d.ganho) + '</b>').join(' &nbsp; ') + '</span>' : '') +
       '<span class="alterar">✏️ Alterar esta parcial</span></button>';
   });
   const kmTxt = n0(t.kmParc) + ' km nas parciais' + (t.fechado ? '' : ' · estimado até abastecer');
@@ -585,11 +587,11 @@ function relatorio(t, c, pct, n, aberto){
     linha('Total ganho', R$(t.ganho), 'total') +
     linha('⛽ Gasolina do trabalho', '<span class="neg">' + R$(-t.gasTrab) + '</span>', '', kmTxt) +
     (t.lanche ? linha('🍔 Lanches e outros gastos', '<span class="neg">' + R$(-t.lanche) + '</span>') : '') +
-    linha('Lucro do trabalho', '<span class="' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', 'total') +
+    linha('Lucro do trabalho', '<span class="etq-sm ' + cor(t.lucroTrabalho) + '">' + R$(t.lucroTrabalho) + '</span>', 'total') +
     (pct > 0 && t.lucroTrabalho > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(t.reserva)) + linha('Livre para você', R$(t.livre)) : '') +
     (t.ganho > 0 ? '<h4>📱 Lucro por aplicativo</h4>' + [[U, t.uber], [N, t.n99]].filter(x => x[1] > 0).map(([m, g]) => {
       const f = g / t.ganho, gas = t.gasTrab * f, lan = t.lanche * f, lu = g - gas - lan;
-      return linha(m + ' Lucro', '<span class="' + cor(lu) + '">' + R$(lu) + '</span>', '', 'ganho ' + R$(g) + ' − gasolina ' + R$(gas) + (lan ? ' − lanche ' + R$(lan) : '') + ' · ' + n0(f * 100) + '% do ganho');
+      return linha(m + ' Lucro', '<span class="etq-sm ' + cor(lu) + '">' + R$(lu) + '</span>', '', 'ganho ' + R$(g) + ' − gasolina ' + R$(gas) + (lan ? ' − lanche ' + R$(lan) : '') + ' · ' + n0(f * 100) + '% do ganho');
     }).join('') + '<p class="s" style="margin:6px 0 0">A gasolina do trabalho e os lanches são divididos na proporção do que cada aplicativo rendeu.</p>' : '');
   h += '<h4>⛽ Conta do tanque inteiro</h4>' +
     linha('Gasolina que você pôs', R$(a.valor), '', n1(a.litros) + ' L') +
