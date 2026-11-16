@@ -141,7 +141,10 @@ details.rel-det[open] summary::after{content:" ▴"}
 .tint4{--tint-fundo:var(--c4);--tint-borda:var(--c4b)} .tint5{--tint-fundo:var(--c5);--tint-borda:var(--c5b)} .tint6{--tint-fundo:var(--c6);--tint-borda:var(--c6b)}
 .rel h4{margin:14px 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .rel h4:first-of-type{margin-top:4px}
-.parc-row{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.parc-row{display:block;width:100%;text-align:left;background:var(--pc-fundo,var(--bg));border:1px solid var(--pc-borda,var(--line));border-left:6px solid var(--pc-borda,var(--line));border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.pc1{--pc-fundo:var(--c1);--pc-borda:var(--c1b)} .pc2{--pc-fundo:var(--c2);--pc-borda:var(--c2b)} .pc3{--pc-fundo:var(--c3);--pc-borda:var(--c3b)}
+.pc4{--pc-fundo:var(--c4);--pc-borda:var(--c4b)} .pc5{--pc-fundo:var(--c5);--pc-borda:var(--c5b)} .pc6{--pc-fundo:var(--c6);--pc-borda:var(--c6b)}
+.pnum{display:inline-grid;place-items:center;min-width:30px;height:24px;padding:0 6px;border-radius:99px;background:var(--pc-borda,var(--line));color:var(--text);font-weight:800;font-size:13px;margin-right:6px}
 .parc-row .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .parc-row .top b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .parc-row .s .marca{height:18px;font-size:11px;padding:0 5px}
@@ -574,7 +577,7 @@ function relatorio(t, c, pct, n, aberto){
     if (d.particular > 0) h += '<div class="s" style="margin:0 0 8px;padding:8px 12px;border:1px dashed var(--line);border-radius:12px">🏠 ' + n0(d.particular) + ' km de uso particular (passeio)' + (t.custoKm != null ? ' · cerca de ' + R$(d.particular * t.custoKm) + ' de gasolina' : '') +
       '<span style="display:block"><button class="alterar" data-editar="' + esc(d.id) + '">✏️ Alterar passeio</button></span>' +
       '<span style="display:block;font-size:12px;margin-top:4px">Muda o hodômetro de saída da ' + (i + 1) + 'ª parcial.</span></div>';
-    h += '<button class="parc-row" data-editar="' + esc(d.id) + '"><span class="top"><span class="t">' + (i + 1) + 'ª · ' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
+    h += '<button class="parc-row pc' + ((n + i) % 6 + 1) + '" data-editar="' + esc(d.id) + '"><span class="top"><span class="t"><span class="pnum">' + (i + 1) + 'ª</span>' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
       '<b class="' + cor(v) + '">' + R$(v) + '</b></span>' +
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
       (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') +
