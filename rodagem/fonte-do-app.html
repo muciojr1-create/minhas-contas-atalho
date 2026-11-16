@@ -571,7 +571,9 @@ function relatorio(t, c, pct, n, aberto){
     const v = d.lucro != null ? d.lucro : d.ganho - d.lanche;
     const km = d.rodou != null ? n0(d.km - d.rodou) + ' → ' + n0(d.km) + ' km (' + n0(d.rodou) + ' km)' : (d.km > 0 ? 'km final menor que o da saída, confira' : 'sem km');
     const g = []; if (d.uber) g.push(U + R$(d.uber)); if (d.n99) g.push(N + R$(d.n99)); if (d.lanche) g.push('🍔 ' + R$(d.lanche)); if (d.custo != null) g.push('⛽ ' + R$(d.custo));
-    if (d.particular > 0) h += '<p class="s" style="margin:0 0 8px;padding-left:12px">🏠 ' + n0(d.particular) + ' km de uso particular' + (t.custoKm != null ? ' (cerca de ' + R$(d.particular * t.custoKm) + ' de gasolina)' : '') + '</p>';
+    if (d.particular > 0) h += '<div class="s" style="margin:0 0 8px;padding:8px 12px;border:1px dashed var(--line);border-radius:12px">🏠 ' + n0(d.particular) + ' km de uso particular (passeio)' + (t.custoKm != null ? ' · cerca de ' + R$(d.particular * t.custoKm) + ' de gasolina' : '') +
+      '<span style="display:block"><button class="alterar" data-editar="' + esc(d.id) + '">✏️ Alterar passeio</button></span>' +
+      '<span style="display:block;font-size:12px;margin-top:4px">Muda o hodômetro de saída da ' + (i + 1) + 'ª parcial.</span></div>';
     h += '<button class="parc-row" data-editar="' + esc(d.id) + '"><span class="top"><span class="t">' + (i + 1) + 'ª · ' + dataBR(d.data, true) + (d.hIni && d.hFim ? ' · ' + esc(d.hIni) + '–' + esc(d.hFim) : '') + '</span>' +
       '<b class="' + cor(v) + '">' + R$(v) + '</b></span>' +
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
