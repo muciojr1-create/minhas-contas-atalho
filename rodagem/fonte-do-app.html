@@ -130,6 +130,8 @@ a.fonte-btn:active{opacity:.7}
 .rel-resumo span{display:block;font-size:11px;color:var(--muted);font-weight:600}
 .rel-resumo b{font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .rel-in{padding:12px 16px 14px}
+.alterar{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:5px 12px;border-radius:99px;border:1px solid var(--primary);background:var(--primary-soft);color:var(--primary-text);font-weight:700;font-size:12.5px;cursor:pointer}
+button.alterar{font-family:inherit}
 .rel-in .veredito{margin-top:0}
 details.rel-det summary{margin-top:12px;padding:11px 12px;border-radius:12px;background:var(--tint-fundo);color:var(--text);font-weight:700;list-style:none;text-align:center}
 details.rel-det summary::-webkit-details-marker{display:none}
@@ -544,7 +546,7 @@ function listaParciais(dias){
       (ganhos.length ? '<span class="s" style="display:block">' + ganhos.join(' &nbsp; ') + '</span>' : '') +
       '<span class="s" style="display:block">' + info.join(' · ') + '</span>' +
       (gastos.length ? '<span class="s" style="display:block">' + gastos.join(' · ') + '</span>' : '') + '</span>' +
-      '<span class="v ' + cor(v) + '">' + R$(v) + (d.horas > 0 ? '<small>' + R$(v / d.horas) + ' por hora</small>' : '') + '</span></button>';
+      '<span class="v ' + cor(v) + '">' + R$(v) + (d.horas > 0 ? '<small>' + R$(v / d.horas) + ' por hora</small>' : '') + '<span class="alterar" style="margin-top:6px">✏️ Alterar</span></span></button>';
   }).join('');
 }
 const linha = (rot, val, cls, sub) => '<div class="linha' + (cls ? ' ' + cls : '') + '"><span>' + rot + (sub ? '<small>' + sub + '</small>' : '') + '</span><b>' + val + '</b></div>';
@@ -562,7 +564,7 @@ function relatorio(t, c, pct, n, aberto){
       '<div><span>Gasolina</span><b>' + R$(a.valor) + '</b></div>' +
     '</div><div class="rel-in">';
   let h = '';
-  h += '<h4>⛽ Abastecimento</h4>' + linha(R$(a.valor) + ' de gasolina', n1(a.litros) + ' L', '', R$(t.preco) + ' o litro' + (a.hora ? ' · às ' + esc(a.hora) : '') + ' · <button class="link" data-editar="' + esc(a.id) + '">corrigir</button>');
+  h += '<h4>⛽ Abastecimento</h4>' + linha(R$(a.valor) + ' de gasolina', n1(a.litros) + ' L', '', R$(t.preco) + ' o litro' + (a.hora ? ' · às ' + esc(a.hora) : '') + '') + '<button class="alterar" data-editar="' + esc(a.id) + '">✏️ Alterar abastecimento</button>';
   h += '<h4>🚗 Parciais (' + t.dias.length + ')</h4>';
   if (!t.dias.length) h += '<p class="s" style="margin:0 0 8px">Nenhuma parcial ainda. Toque em Iniciar parcial quando sair para rodar.</p>';
   t.dias.forEach((d, i) => {
@@ -575,7 +577,8 @@ function relatorio(t, c, pct, n, aberto){
       '<span class="s" style="display:block">' + km + (d.horas > 0 ? ' · ' + hm(d.horas) : '') + '</span>' +
       (g.length ? '<span class="s" style="display:block">' + g.join(' &nbsp; ') + '</span>' : '') +
       (d.lucro != null && d.ganho > 0 ? '<span class="s" style="display:block">Lucro do dia: ' + [[U, d.uber], [N, d.n99]].filter(x => x[1] > 0)
-        .map(([m, x]) => m + '<b class="' + cor(d.lucro * x / d.ganho) + '">' + R$(d.lucro * x / d.ganho) + '</b>').join(' &nbsp; ') + '</span>' : '') + '</button>';
+        .map(([m, x]) => m + '<b class="' + cor(d.lucro * x / d.ganho) + '">' + R$(d.lucro * x / d.ganho) + '</b>').join(' &nbsp; ') + '</span>' : '') +
+      '<span class="alterar">✏️ Alterar esta parcial</span></button>';
   });
   const kmTxt = n0(t.kmParc) + ' km nas parciais' + (t.fechado ? '' : ' · estimado até abastecer');
   h += '<h4>🧮 Conta do trabalho (Uber + 99)</h4>' +
@@ -644,7 +647,8 @@ function telaResumo(c, pct){
   if (ab){
     const ha = haQuanto(ab);
     h += '<div class="card andamento"><span class="ico">▶️</span><span class="mid"><span class="t">' + (atual.dias.length + 1) + 'ª parcial em andamento</span>' +
-      '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni != null ? ' · hodômetro em ' + n0(ab.kmIni) + ' km' : '') + '</span></span>' +
+      '<span class="s" style="display:block">Desde ' + (ab.hIni ? esc(ab.hIni) : dataBR(ab.data)) + (ha ? ' · há <span id="haQuanto">' + ha + '</span>' : '') + (ab.kmIni != null ? ' · hodômetro em ' + n0(ab.kmIni) + ' km' : '') + '</span>' +
+      '<span style="display:block"><button class="alterar" data-alterar-inicio="' + esc(ab.id) + '">✏️ Alterar início</button></span></span>' +
       '<button class="btn" data-novo="encerrar">Encerrar</button></div>';
   } else {
     h += '<div class="grid2" style="margin-bottom:12px"><button class="btn" data-novo="iniciar">▶ Iniciar ' + (atual.dias.length + 1) + 'ª parcial</button><button class="btn ghost" data-novo="abast">⛽ Abastecer e fechar tanque</button></div>';
@@ -831,8 +835,8 @@ function abrirParcial(modo, id){
   editando = id || null;
   modoParcial = r && r.aberta && modo === 'editar' ? 'encerrar' : modo;
   const m = modoParcial;
-  $('tituloParcial').textContent = {iniciar: 'Iniciar parcial', encerrar: 'Encerrar parcial', completa: 'Parcial já terminada', editar: 'Corrigir parcial'}[m];
-  $('pSalvar').textContent = m === 'iniciar' ? 'Começar' : 'Salvar';
+  $('tituloParcial').textContent = m === 'iniciar' && r ? 'Alterar início da parcial' : {iniciar: 'Iniciar parcial', encerrar: 'Encerrar parcial', completa: 'Parcial já terminada', editar: 'Alterar parcial'}[m];
+  $('pSalvar').textContent = m === 'iniciar' && !r ? 'Começar' : 'Salvar';
   $('pFim').hidden = m === 'iniciar';
   // Ao encerrar, o início já foi marcado: mostra só o resumo, com opção de corrigir.
   const soResumo = m === 'encerrar' && r && r.aberta;
@@ -947,7 +951,7 @@ $('formParcial').addEventListener('submit', e => {
   if (modoParcial === 'iniciar'){
     if (!d.hIni) return erro(el, 'Informe a hora em que começou.');
     const novo = {tipo: 'dia', aberta: true, data: d.data, hIni: d.hIni, kmIni: d.kmIni, criado: d.criado};
-    return concluir(() => gravar(editando || novoId('d'), novo), el, 'Parcial iniciada. Boa rodagem!');
+    return concluir(() => gravar(editando || novoId('d'), novo), el, editando ? 'Início da parcial alterado' : 'Parcial iniciada. Boa rodagem!');
   }
   if (d.erroTotal){
     const a = ganhosAntes(d.data, editando);
@@ -962,7 +966,7 @@ $('formParcial').addEventListener('submit', e => {
 function abrirAbast(id){
   fecharFolhas();
   const r = id ? regs.get(id) : null; editando = id || null;
-  $('tituloAbast').textContent = r ? 'Corrigir abastecimento' : 'Abastecimento';
+  $('tituloAbast').textContent = r ? 'Alterar abastecimento' : 'Abastecimento';
   $('aData').value = r ? r.data : hoje();
   $('aValor').value = r ? paraCampo(r.valor, 2) : '';
   $('aLitros').value = r ? paraCampo(r.litros, 2) : '';
@@ -1009,10 +1013,11 @@ for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['pExcluir', 'pErro']]){
 $('fab').addEventListener('click', abrirMenu);
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('fundo')) return fecharFolhas();
-  const t = e.target.closest('[data-novo-evento],[data-apagar-evento],[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
+  const t = e.target.closest('[data-alterar-inicio],[data-novo-evento],[data-apagar-evento],[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
   if (!t) return;
   if (t.hasAttribute('data-fechar')) return fecharFolhas();
   if (t.hasAttribute('data-novo-evento')) return abrirEvento();
+  if (t.dataset.alterarInicio) return abrirParcial('iniciar', t.dataset.alterarInicio);
   if (t.dataset.apagarEvento){
     if (!t.dataset.certo){ t.dataset.certo = '1'; t.textContent = 'apagar mesmo?'; return; }
     colEventos.doc(t.dataset.apagarEvento).delete().then(() => toast('Evento apagado'), () => toast('Não foi possível apagar agora. Tente de novo.'));
