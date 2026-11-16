@@ -7,22 +7,13 @@
   --bg:#f4f6f8; --card:#ffffff; --text:#14202b; --muted:#64748b; --line:#e2e8f0;
   --primary:#f2b01e; --on-primary:#231a00; --primary-soft:#fdf0cf; --primary-text:#8a5a00;
   --danger:#dc2626; --danger-soft:#fee2e2; --ok:#16a34a; --ok-soft:#dcfce7;
-  --hero:#1b2430; --hero-fg:#f3f5f8; --hero-ok:#4ade80; --hero-bad:#fca5a5;
+  --hero:#fff8e6; --hero-fg:#14202b; --hero-ok:#15803d; --hero-bad:#dc2626;
   --uber:#000000; --uber-fg:#ffffff; --n99:#ffd500; --n99-fg:#1a1a1a;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.04); --shade:rgba(0,0,0,.45); --radius:16px;
   --c1:#fdf3d8; --c1b:#f1d98f; --c2:#e3eefc; --c2b:#b3cdf0; --c3:#e2f4e8; --c3b:#a9d8b8;
   --c4:#efe7fa; --c4b:#cbb7ea; --c5:#ddf2f2; --c5b:#a3d4d4; --c6:#fbe6ea; --c6b:#ebb4bf;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
-  --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
-  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65);
-  --c1:#3a3018; --c1b:#5c4b1f; --c2:#1b2a40; --c2b:#2f4766; --c3:#18321f; --c3b:#2b5236; --c4:#2a2140; --c4b:#45366a; --c5:#173233; --c5b:#295456; --c6:#3a1d24; --c6b:#5e2f3a; color-scheme:dark } }
-:root[data-theme="dark"]{
-  --bg:#0b1117; --card:#151e27; --text:#e6edf3; --muted:#8b9bb0; --line:#243241;
-  --primary-soft:#3a2c08; --primary-text:#f2b01e; --danger:#f87171; --danger-soft:#3b1717; --ok:#4ade80; --ok-soft:#123d22;
-  --hero:#1d2836; --shadow:none; --shade:rgba(0,0,0,.65);
-  --c1:#3a3018; --c1b:#5c4b1f; --c2:#1b2a40; --c2b:#2f4766; --c3:#18321f; --c3b:#2b5236; --c4:#2a2140; --c4b:#45366a; --c5:#173233; --c5b:#295456; --c6:#3a1d24; --c6b:#5e2f3a; color-scheme:dark }
+
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
@@ -42,19 +33,19 @@ h2 span{text-transform:none;letter-spacing:0;font-weight:600}
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px;border:1px solid var(--line)}
 .aviso{border-left:4px solid var(--primary);font-size:14px}
 
-.hero{background:var(--hero);color:var(--hero-fg);border:none;overflow:hidden;padding:0}
+.hero{background:var(--hero);color:var(--hero-fg);border:1px solid #f1d98f;overflow:hidden;padding:0}
 .hero::before{content:"";display:block;height:6px;background:repeating-linear-gradient(90deg,var(--primary) 0 26px,transparent 26px 44px)}
 .hero-in{padding:14px 16px 16px}
-.hero .lbl{opacity:.85;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hero .lbl{color:#4b5563;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .hero .big{font-size:36px;font-weight:700;letter-spacing:-.02em;margin:2px 0 10px;font-variant-numeric:tabular-nums}
 .hero .big.pos{color:var(--hero-ok)} .hero .big.neg{color:var(--hero-bad)}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.trio div{background:rgba(255,255,255,.1);border-radius:12px;padding:8px 10px;min-width:0}
+.trio div{background:#ffffff;border:1px solid #f1e3b8;border-radius:12px;padding:8px 10px;min-width:0}
 .trio span{display:flex;align-items:center;gap:5px;font-size:12px;opacity:.9;min-height:22px}
 .trio b{font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.meter{height:8px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;margin:12px 0 6px}
+.meter{height:8px;border-radius:99px;background:#efe3c2;overflow:hidden;margin:12px 0 6px}
 .meter i{display:block;height:100%;background:var(--primary)}
-.hero p{margin:6px 0 0;font-size:13px;opacity:.85}
+.hero p{margin:6px 0 0;font-size:13.5px;color:#4b5563}
 .hero ol{margin:6px 0 0;padding-left:20px;font-size:15px} .hero li{padding:4px 0}
 .link{background:none;border:0;padding:0;text-decoration:underline;color:var(--primary-text);font-weight:600}
 
