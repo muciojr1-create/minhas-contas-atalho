@@ -122,9 +122,18 @@ a.fonte-btn:active{opacity:.7}
 .etq-sm.neg{background:#dc2626}
 .rel-lucro small{display:block;font-size:11px;font-weight:700;color:#374151;margin-top:3px}
 .rel-ganhos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 10px;background:var(--tint-fundo)}
-.rel-ganhos span{border-radius:10px;padding:6px 8px;font-weight:800;font-size:15.5px;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.15);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rel-ganhos span{border-radius:10px;padding:6px 7px;font-weight:800;font-size:14px;letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.15);min-width:0}
 .rel-ganhos small{display:block;font-size:11px;font-weight:700;opacity:.85}
 .rel-ganhos .g-u{background:#000;color:#fff} .rel-ganhos .g-n{background:#ffd500;color:#1a1a1a} .rel-ganhos .g-t{background:#1d4ed8;color:#fff}
+.dia-sem{padding:11px 14px;margin-bottom:8px}
+.dia-sem.vazio{opacity:.6}
+.dia-sem.hoje{border:2px solid var(--primary)}
+.ds-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ds-top .t{text-transform:capitalize}
+.ds-vals{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:14px;font-variant-numeric:tabular-nums}
+.ds-vals .marca{height:18px;font-size:11px;padding:0 5px;margin-right:4px}
+.ds-acum{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:13px;color:var(--muted)}
+.ds-acum b{color:var(--text)}
 .rel-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px 12px;background:var(--tint-fundo)}
 .rel-resumo div{background:var(--card);border-radius:10px;padding:7px 8px;min-width:0}
 .rel-resumo span{display:block;font-size:11px;color:var(--muted);font-weight:600}
@@ -196,6 +205,7 @@ label.f .marca{margin-right:4px}
 <button class="fab" id="fab" aria-label="Adicionar">+</button>
 <nav class="tabs">
   <button data-tab="resumo" class="on"><b>🏠</b>Resumo</button>
+  <button data-tab="semana"><b>📅</b>Semana</button>
   <button data-tab="tanques"><b>🧾</b>Relatórios</button>
   <button data-tab="historico"><b>📋</b>Histórico</button>
   <button data-tab="mes"><b>📊</b>Mês</button>
@@ -429,6 +439,7 @@ let config = {mediaPadrao: 10, reservaPct: 0};
 let col = null;                 // coleção no banco (null = guardando só neste aparelho)
 let pronto = false;
 let mesVisto = hoje().slice(0, 7);
+let semanaDesloc = 0;            // 0 = semana atual, -1 = anterior…
 let aba = 'resumo';
 let editando = null, modoParcial = 'completa';
 let agenda = null;               // eventos de Brasília (documento eventos/agenda)
@@ -662,7 +673,57 @@ function telaResumo(c, pct){
   }
   h += relatorio(atual, c, pct, c.tanques.length, true);
   if (c.tanques.length > 1) h += '<button class="btn ghost full" data-tab="tanques">Ver relatórios dos tanques anteriores</button>';
-  return h + cartaoInstalar();
+  return h + cartaoSemana(c) + cartaoInstalar();
+}
+
+// ---------- semana (segunda a domingo) ----------
+const isoDe = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+function segundaDe(iso){ const [a, m, d] = iso.split('-').map(Number), x = new Date(a, m - 1, d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+function resumoSemana(c, desloc){
+  const ini = segundaDe(hoje()); ini.setDate(ini.getDate() + 7 * desloc);
+  const dias = [];
+  for (let i = 0; i < 7; i++){ const d = new Date(ini); d.setDate(ini.getDate() + i); dias.push({iso: isoDe(d), uber: 0, n99: 0, ganho: 0, lucro: 0, parciais: 0}); }
+  const porIso = Object.fromEntries(dias.map(d => [d.iso, d]));
+  for (const p of [...c.soltos, ...c.tanques.flatMap(t => t.dias)]){
+    const d = porIso[p.data]; if (!d) continue;
+    d.uber += p.uber || 0; d.n99 += p.n99 || 0; d.ganho += p.ganho || 0; d.parciais++;
+    d.lucro += p.lucro != null ? p.lucro : (p.ganho || 0) - (p.lanche || 0);
+  }
+  let acc = 0, accL = 0;
+  for (const d of dias){ acc += d.ganho; accL += d.lucro; d.acum = acc; d.acumL = accL; }
+  const tot = dias.reduce((o, d) => ({uber: o.uber + d.uber, n99: o.n99 + d.n99, ganho: o.ganho + d.ganho, lucro: o.lucro + d.lucro, parciais: o.parciais + d.parciais}), {uber: 0, n99: 0, ganho: 0, lucro: 0, parciais: 0});
+  return {dias, tot, ini: dias[0].iso, fim: dias[6].iso, fechada: dias[6].iso < hoje()};
+}
+function telaSemana(c){
+  const sm = resumoSemana(c, semanaDesloc), hj = hoje();
+  const nomeDia = iso => { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d).toLocaleDateString('pt-BR', {weekday: 'short'}).replace('.', ''); };
+  const titulo = semanaDesloc === 0 ? 'Esta semana' : semanaDesloc === -1 ? 'Semana passada' : 'Semana';
+  let h = '<div class="monthnav"><button class="iconbtn" data-semana="-1" aria-label="Semana anterior">‹</button><b style="text-align:center">' + titulo +
+    '<small style="display:block;font-size:13px;color:var(--muted);font-weight:600">seg ' + dataBR(sm.ini) + ' a dom ' + dataBR(sm.fim) + '</small></b>' +
+    '<button class="iconbtn" data-semana="1" aria-label="Próxima semana"' + (semanaDesloc >= 0 ? ' disabled style="opacity:.35"' : '') + '>›</button></div>';
+  const ult = [...sm.dias].reverse().find(d => d.parciais > 0);
+  h += '<div class="card rel tint2"><div class="rel-cab"><div><span class="rel-num">' + (sm.fechada ? 'Semana fechada' : 'Semana até agora') + '</span>' +
+    '<span class="rel-per">' + (sm.fechada ? 'resultado de segunda a domingo' : (ult ? 'até ' + nomeDia(ult.iso) + ', ' + dataBR(ult.iso) : 'nenhuma parcial ainda')) + ' · ' + sm.tot.parciais + ' parciais</span></div>' +
+    '<b class="rel-lucro ' + cor(sm.tot.lucro) + '"><span class="etq">' + R$(sm.tot.lucro) + '</span><small>lucro da semana</small></b></div>' +
+    '<div class="rel-ganhos" style="padding-bottom:14px"><span class="g-u"><small>Uber fez</small>' + R$(sm.tot.uber) + '</span><span class="g-n"><small>99 fez</small>' + R$(sm.tot.n99) + '</span>' +
+    '<span class="g-t"><small>Total ganho</small>' + R$(sm.tot.ganho) + '</span></div></div>';
+  h += '<h2>Dia a dia</h2>';
+  for (const d of sm.dias){
+    const futuro = d.iso > hj, hoj = d.iso === hj;
+    h += '<div class="card dia-sem' + (d.parciais ? '' : ' vazio') + (hoj ? ' hoje' : '') + '"><div class="ds-top"><span class="t">' + nomeDia(d.iso) + ', ' + dataBR(d.iso) + (hoj ? ' <span class="pill">hoje</span>' : '') + '</span>' +
+      (d.parciais ? '<span class="etq-sm ' + cor(d.lucro) + '">' + R$(d.lucro) + '</span>' : '<span class="s">' + (futuro ? '—' : 'não rodou') + '</span>') + '</div>' +
+      (d.parciais ? '<div class="ds-vals"><span>' + U + R$(d.uber) + '</span><span>' + N + R$(d.n99) + '</span><span><b>Total ' + R$(d.ganho) + '</b></span></div>' : '') +
+      (d.parciais || (!futuro && d.acum) ? '<div class="ds-acum">Acumulado na semana: <b>' + R$(d.acum) + '</b> · lucro <b class="' + cor(d.acumL) + '">' + R$(d.acumL) + '</b></div>' : '') + '</div>';
+  }
+  h += '<p class="s">O lucro de cada dia já desconta a gasolina dos km rodados e o lanche. A semana vai de segunda a domingo e fecha sozinha no domingo.</p>';
+  return h;
+}
+function cartaoSemana(c){
+  const sm = resumoSemana(c, 0);
+  if (!sm.tot.parciais) return '';
+  return '<button class="card instalar" data-tab="semana" style="width:100%;text-align:left;border-color:var(--c2b)"><span style="font-size:26px">📅</span><span class="mid" style="flex:1;min-width:0">' +
+    '<span class="t">Semana até agora</span><span class="s" style="display:block">' + U + R$(sm.tot.uber) + ' &nbsp; ' + N + R$(sm.tot.n99) + ' &nbsp; total ' + R$(sm.tot.ganho) + '</span></span>' +
+    '<span class="etq-sm ' + cor(sm.tot.lucro) + '">' + R$(sm.tot.lucro) + '</span></button>';
 }
 
 function telaTanques(c, pct){
@@ -780,7 +841,7 @@ function render(){
   const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
   const pct = Number(config.reservaPct) || 0;
   const c = calcular(lista, config.mediaPadrao, pct);
-  $('view').innerHTML = aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'eventos' ? telaEventos() : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
+  $('view').innerHTML = aba === 'semana' ? telaSemana(c) : aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'eventos' ? telaEventos() : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
   for (const b of document.querySelectorAll('nav.tabs button')) b.classList.toggle('on', b.dataset.tab === aba);
 }
 setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.textContent = haQuanto(p); }, 30000);
@@ -967,7 +1028,13 @@ $('formParcial').addEventListener('submit', e => {
   delete d.erroTotal;
   if (!(d.uber > 0) && !(d.n99 > 0) && !(d.km > 0) && !d.uberTotal && !d.n99Total) return erro(el, 'Informe o km final ou o ganho na Uber ou na 99.');
   if (d.kmIni != null && d.km > 0 && d.km < d.kmIni) return erro(el, 'O hodômetro ao parar não pode ser menor que o da saída. Se abasteceu no meio, lance o abastecimento antes.');
-  concluir(() => gravar(editando || novoId('d'), d), el, 'Parcial salva');
+  concluir(() => gravar(editando || novoId('d'), d), el, 'Parcial salva').then(() => {
+    try {
+      const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
+      const sm = resumoSemana(calcular(lista, config.mediaPadrao, 0), 0);
+      if (sm.tot.parciais) toast('Parcial salva. Semana até agora: ' + R$(sm.tot.ganho) + ' (lucro ' + R$(sm.tot.lucro) + ')');
+    } catch (er) {}
+  });
 });
 
 function abrirAbast(id){
@@ -1020,7 +1087,7 @@ for (const [btnId, elErro] of [['aExcluir', 'aErro'], ['pExcluir', 'pErro']]){
 $('fab').addEventListener('click', abrirMenu);
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('fundo')) return fecharFolhas();
-  const t = e.target.closest('[data-alterar-inicio],[data-novo-evento],[data-apagar-evento],[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
+  const t = e.target.closest('[data-semana],[data-alterar-inicio],[data-novo-evento],[data-apagar-evento],[data-agora],[data-fechar],[data-novo],[data-editar],[data-mes],[data-ajustes],[data-tab]');
   if (!t) return;
   if (t.hasAttribute('data-fechar')) return fecharFolhas();
   if (t.hasAttribute('data-novo-evento')) return abrirEvento();
@@ -1036,6 +1103,7 @@ document.addEventListener('click', e => {
   if (t.dataset.novo === 'encerrar'){ const ab = parcialAberta(); return ab ? abrirParcial('encerrar', ab.id) : abrirParcial('completa'); }
   if (t.dataset.novo) return abrirParcial(t.dataset.novo);
   if (t.dataset.editar){ const r = regs.get(t.dataset.editar); if (r) r.tipo === 'abast' ? abrirAbast(t.dataset.editar) : abrirParcial('editar', t.dataset.editar); return; }
+  if (t.dataset.semana){ semanaDesloc = Math.min(0, semanaDesloc + Number(t.dataset.semana)); render(); return; }
   if (t.dataset.mes){
     const [a, m] = mesVisto.split('-').map(Number), d = new Date(a, m - 1 + Number(t.dataset.mes), 1);
     mesVisto = d.getFullYear() + '-' + p2(d.getMonth() + 1); render(); return;
