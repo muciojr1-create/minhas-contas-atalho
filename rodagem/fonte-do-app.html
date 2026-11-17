@@ -726,6 +726,35 @@ function cartaoSemana(c){
     '<span class="etq-sm ' + cor(sm.tot.lucro) + '">' + R$(sm.tot.lucro) + '</span></button>';
 }
 
+function telaMes(c, lista, pct){
+  const dias = [...c.soltos, ...c.tanques.flatMap(t => t.dias)].filter(d => d.data.slice(0, 7) === mesVisto);
+  const soma = f => dias.reduce((s, d) => s + (f(d) || 0), 0);
+  const uber = soma(d => d.uber), n99 = soma(d => d.n99), lanche = soma(d => d.lanche), km = soma(d => d.rodou), horas = soma(d => d.horas);
+  const comb = lista.filter(r => r.tipo === 'abast' && r.data.slice(0, 7) === mesVisto).reduce((s, r) => s + r.valor, 0);
+  const nDias = new Set(dias.map(d => d.data)).size, ganho = uber + n99;
+  const lucro = ganho - comb - lanche, reserva = lucro > 0 ? lucro * pct / 100 : 0;
+  const [ma, mm] = mesVisto.split('-').map(Number);
+  const nome = new Date(ma, mm - 1, 1).toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'});
+  return '<div class="monthnav"><button class="iconbtn" data-mes="-1" aria-label="Mês anterior">‹</button><b>' + nome + '</b><button class="iconbtn" data-mes="1" aria-label="Próximo mês">›</button></div>' +
+    '<div class="card rel tint3"><div class="rel-cab"><div><span class="rel-num">Resumo do mês</span><span class="rel-per">' + nDias + ' dias rodados · ' + dias.length + ' parciais</span></div>' +
+    '<b class="rel-lucro ' + cor(lucro) + '"><span class="etq">' + R$(lucro) + '</span><small>lucro do mês</small></b></div>' +
+    '<div class="rel-ganhos" style="padding-bottom:14px"><span class="g-u"><small>Uber fez</small>' + R$(uber) + '</span><span class="g-n"><small>99 fez</small>' + R$(n99) + '</span>' +
+    '<span class="g-t"><small>Total ganho</small>' + R$(ganho) + '</span></div></div>' +
+    '<div class="card">' +
+    linha(U + ' Ganhos', R$(uber), '', ganho > 0 ? 'lucro proporcional ' + R$(lucro * uber / ganho) : '') +
+    linha(N + ' Ganhos', R$(n99), '', ganho > 0 ? 'lucro proporcional ' + R$(lucro * n99 / ganho) : '') +
+    linha('⛽ Gasolina paga no mês', '<span class="neg">' + R$(-comb) + '</span>') +
+    (lanche ? linha('🍔 Lanche e outros gastos', '<span class="neg">' + R$(-lanche) + '</span>') : '') +
+    linha('Lucro do mês', '<span class="' + cor(lucro) + '">' + R$(lucro) + '</span>', 'total') +
+    (pct > 0 ? linha('🔧 Reserva de manutenção (' + n0(pct) + '%)', R$(reserva)) + linha('Livre para você', '<span class="' + cor(lucro) + '">' + R$(lucro - reserva) + '</span>', 'total') : '') +
+    '</div><div class="card">' +
+    linha('📅 Dias rodados', String(nDias), '', dias.length + ' parciais') +
+    linha('🛣️ Km em corridas', n0(km) + ' km', '', km > 0 ? R$(ganho / km) + ' de ganho por km' : '') +
+    linha('⏱️ Horas trabalhadas', horas > 0 ? hm(horas) : '–', '', horas > 0 ? R$(lucro / horas) + ' de lucro por hora' : '') +
+    (nDias ? linha('Ganho médio por dia', R$(ganho / nDias)) : '') +
+    '</div>';
+}
+
 function telaTanques(c, pct){
   if (!c.tanques.length) return '<div class="card"><p class="empty">Nenhum abastecimento lançado.<br>Toque no + e escolha Abastecimento.</p></div>';
   let h = c.mediaGeral ? '<h2 style="margin-top:6px">Média geral do carro<span>' + n1(c.mediaGeral) + ' km/l</span></h2>' : '<h2 style="margin-top:6px">Relatórios dos tanques</h2>';
@@ -841,7 +870,14 @@ function render(){
   const lista = [...regs.entries()].map(([id, r]) => ({...r, id}));
   const pct = Number(config.reservaPct) || 0;
   const c = calcular(lista, config.mediaPadrao, pct);
-  $('view').innerHTML = aba === 'semana' ? telaSemana(c) : aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'eventos' ? telaEventos() : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
+  try {
+    $('view').innerHTML = aba === 'semana' ? telaSemana(c) : aba === 'tanques' ? telaTanques(c, pct) : aba === 'historico' ? telaHistorico(c, lista, pct) : aba === 'eventos' ? telaEventos() : aba === 'mes' ? telaMes(c, lista, pct) : telaResumo(c, pct);
+  } catch (er) {
+    console.error(er);
+    aba = 'resumo'; try { localStorage.setItem('rodagem-aba', aba); } catch (e2) {}
+    $('view').innerHTML = telaResumo(c, pct);
+    toast('Essa tela teve um problema. Voltei para o Resumo.');
+  }
   for (const b of document.querySelectorAll('nav.tabs button')) b.classList.toggle('on', b.dataset.tab === aba);
 }
 setInterval(() => { const e = $('haQuanto'), p = parcialAberta(); if (e && p) e.textContent = haQuanto(p); }, 30000);
