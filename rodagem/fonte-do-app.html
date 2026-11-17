@@ -121,6 +121,10 @@ a.fonte-btn:active{opacity:.7}
 .etq-sm{display:inline-block;color:#fff!important;background:#15803d;border-radius:8px;padding:2px 8px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .etq-sm.neg{background:#dc2626}
 .rel-lucro small{display:block;font-size:11px;font-weight:700;color:#374151;margin-top:3px}
+.rel-ganhos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 10px;background:var(--tint-fundo)}
+.rel-ganhos span{border-radius:10px;padding:6px 8px;font-weight:800;font-size:15.5px;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.15);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rel-ganhos small{display:block;font-size:11px;font-weight:700;opacity:.85}
+.rel-ganhos .g-u{background:#000;color:#fff} .rel-ganhos .g-n{background:#ffd500;color:#1a1a1a} .rel-ganhos .g-t{background:#1d4ed8;color:#fff}
 .rel-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px 12px;background:var(--tint-fundo)}
 .rel-resumo div{background:var(--card);border-radius:10px;padding:7px 8px;min-width:0}
 .rel-resumo span{display:block;font-size:11px;color:var(--muted);font-weight:600}
@@ -556,6 +560,8 @@ function relatorio(t, c, pct, n, aberto){
   const cab = '<div class="card rel tint' + ((n - 1) % 6 + 1) + '"><div class="rel-cab"><div><span class="rel-num">Tanque ' + n + '</span>' +
     (t.fechado ? '<span class="pill">fechado</span>' : '<span class="pill">em uso</span>') + '<span class="rel-per">' + periodo + '</span></div>' +
     '<b class="rel-lucro ' + cor(t.lucroTrabalho) + '"><span class="etq">' + R$(t.lucroTrabalho) + '</span><small>lucro do trabalho</small></b></div>' +
+    '<div class="rel-ganhos"><span class="g-u"><small>Uber fez</small>' + R$(t.uber) + '</span><span class="g-n"><small>99 fez</small>' + R$(t.n99) + '</span>' +
+      '<span class="g-t"><small>Total ganho</small>' + R$(t.ganho) + '</span></div>' +
     '<div class="rel-resumo">' +
       '<div><span>Parciais</span><b>' + t.dias.length + '</b></div>' +
       '<div><span>Km rodados</span><b>' + n0(t.km) + '</b></div>' +
