@@ -125,14 +125,18 @@ a.fonte-btn:active{opacity:.7}
 .rel-ganhos span{border-radius:10px;padding:6px 7px;font-weight:800;font-size:14px;letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,.15);min-width:0}
 .rel-ganhos small{display:block;font-size:11px;font-weight:700;opacity:.85}
 .rel-ganhos .g-u{background:#000;color:#fff} .rel-ganhos .g-n{background:#ffd500;color:#1a1a1a} .rel-ganhos .g-t{background:#1d4ed8;color:#fff}
-.dia-sem{padding:11px 14px;margin-bottom:8px}
-.dia-sem.vazio{opacity:.6}
+.dia-sem{padding:11px 14px;margin-bottom:8px;background:var(--dc-fundo,var(--card));border-color:var(--dc-borda,var(--line));border-left:6px solid var(--dc-borda,var(--line))}
+.dc1{--dc-fundo:var(--c1);--dc-borda:var(--c1b)} .dc2{--dc-fundo:var(--c2);--dc-borda:var(--c2b)} .dc3{--dc-fundo:var(--c3);--dc-borda:var(--c3b)} .dc4{--dc-fundo:var(--c4);--dc-borda:var(--c4b)}
+.dc5{--dc-fundo:var(--c5);--dc-borda:var(--c5b)} .dc6{--dc-fundo:var(--c6);--dc-borda:var(--c6b)} .dc7{--dc-fundo:#fff1e0;--dc-borda:#f3c99a}
+.ds-blocos{background:none!important;padding:8px 0 0!important}
+.ds-top .t{font-size:16px;font-weight:800}
+.dia-sem.vazio{opacity:.55}
 .dia-sem.hoje{border:2px solid var(--primary)}
 .ds-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .ds-top .t{text-transform:capitalize}
 .ds-vals{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:14px;font-variant-numeric:tabular-nums}
 .ds-vals .marca{height:18px;font-size:11px;padding:0 5px;margin-right:4px}
-.ds-acum{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:13px;color:var(--muted)}
+.ds-acum{margin-top:8px;padding-top:6px;border-top:1px dashed var(--dc-borda,var(--line));font-size:13px;color:#374151}
 .ds-acum b{color:var(--text)}
 .rel-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px 12px;background:var(--tint-fundo)}
 .rel-resumo div{background:var(--card);border-radius:10px;padding:7px 8px;min-width:0}
@@ -310,7 +314,7 @@ label.f .marca{margin-right:4px}
     <p class="s" style="margin:-6px 0 12px">Usada para estimar a gasolina enquanto nenhum tanque foi fechado. Depois o app usa a média real do carro.</p>
     <label class="f">Reserva de manutenção (% do lucro)<input id="mReserva" inputmode="decimal" placeholder="0"></label>
     <p class="s" style="margin:-6px 0 12px">Separa uma parte do lucro de cada tanque e do mês para manutenção. Deixe 0 para não separar.</p>
-    <a class="btn ghost full" href="https://muciojr1-create.github.io/minhas-contas-atalho/rodagem/" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px">📲 Instalar no celular com o ícone do motorista</a>
+    <a class="btn ghost full" href="https://muciojr1-create.github.io/rodagem-atalho/" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px">📲 Instalar no celular com o ícone do motorista</a>
     <p class="erro" id="mErro" hidden></p>
     <div class="actions">
       <button type="button" class="btn ghost" data-fechar>Cancelar</button>
@@ -635,7 +639,7 @@ function relatorio(t, c, pct, n, aberto){
 }
 
 function cartaoInstalar(){
-  return '<a class="card instalar" href="https://muciojr1-create.github.io/minhas-contas-atalho/rodagem/" target="_blank" rel="noopener" style="margin-top:12px">' +
+  return '<a class="card instalar" href="https://muciojr1-create.github.io/rodagem-atalho/" target="_blank" rel="noopener" style="margin-top:12px">' +
     '<img src="' + document.querySelector('.logo').src + '" alt=""><span class="mid" style="flex:1;min-width:0"><span class="t">📲 Instalar com o ícone do motorista</span>' +
     '<span class="s" style="display:block">Abre a página do instalador no navegador. Lá, toque em "Instalar o app". Apague antes o atalho de quadradinhos, se tiver.</span></span><b style="color:var(--primary-text)">↗</b></a>';
 }
@@ -708,13 +712,13 @@ function telaSemana(c){
     '<div class="rel-ganhos" style="padding-bottom:14px"><span class="g-u"><small>Uber fez</small>' + R$(sm.tot.uber) + '</span><span class="g-n"><small>99 fez</small>' + R$(sm.tot.n99) + '</span>' +
     '<span class="g-t"><small>Total ganho</small>' + R$(sm.tot.ganho) + '</span></div></div>';
   h += '<h2>Dia a dia</h2>';
-  for (const d of sm.dias){
+  sm.dias.forEach((d, k) => {
     const futuro = d.iso > hj, hoj = d.iso === hj;
-    h += '<div class="card dia-sem' + (d.parciais ? '' : ' vazio') + (hoj ? ' hoje' : '') + '"><div class="ds-top"><span class="t">' + nomeDia(d.iso) + ', ' + dataBR(d.iso) + (hoj ? ' <span class="pill">hoje</span>' : '') + '</span>' +
+    h += '<div class="card dia-sem dc' + (k + 1) + (d.parciais ? '' : ' vazio') + (hoj ? ' hoje' : '') + '"><div class="ds-top"><span class="t">' + nomeDia(d.iso) + ', ' + dataBR(d.iso) + (hoj ? ' <span class="pill">hoje</span>' : '') + '</span>' +
       (d.parciais ? '<span class="etq-sm ' + cor(d.lucro) + '">' + R$(d.lucro) + '</span>' : '<span class="s">' + (futuro ? '—' : 'não rodou') + '</span>') + '</div>' +
-      (d.parciais ? '<div class="ds-vals"><span>' + U + R$(d.uber) + '</span><span>' + N + R$(d.n99) + '</span><span><b>Total ' + R$(d.ganho) + '</b></span></div>' : '') +
+      (d.parciais ? '<div class="rel-ganhos ds-blocos"><span class="g-u"><small>Uber</small>' + R$(d.uber) + '</span><span class="g-n"><small>99</small>' + R$(d.n99) + '</span><span class="g-t"><small>Total</small>' + R$(d.ganho) + '</span></div>' : '') +
       (d.parciais || (!futuro && d.acum) ? '<div class="ds-acum">Acumulado na semana: <b>' + R$(d.acum) + '</b> · lucro <b class="' + cor(d.acumL) + '">' + R$(d.acumL) + '</b></div>' : '') + '</div>';
-  }
+  });
   h += '<p class="s">O lucro de cada dia já desconta a gasolina dos km rodados e o lanche. A semana vai de segunda a domingo e fecha sozinha no domingo.</p>';
   return h;
 }
